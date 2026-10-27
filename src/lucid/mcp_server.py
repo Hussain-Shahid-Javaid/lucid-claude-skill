@@ -3,8 +3,9 @@
 Protocol support:
 * Initialize-style sessions (protocol 2025-11-25 / 2025-06-18 / 2025-03-26).
 * Per-request style of protocol 2026-07-28 (no initialize; version + client capabilities
-  in `_meta`; `server/discover`). The `server/discover` result shape follows our reading
-  of the 2026-07-28 spec and has NOT been validated against a live 2026-07-28 client.
+  in `_meta`; `server/discover`). Live check 2026-10-27: Claude Code 2.1.311 (`claude mcp list`)
+  probed `server/discover` + `tools/list` with protocol 2026-07-28 and reported "Connected".
+  `tools/call` from a live host has not been exercised (it needs a model turn).
 
 Security:
 * The user scope is fixed by server configuration (--user / LUCID_USER). Tool

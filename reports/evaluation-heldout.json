@@ -1,0 +1,351 @@
+{
+  "split": "heldout",
+  "generated_at": "2026-10-27T18:59:19.303808Z",
+  "python": "3.13.18",
+  "preregistration_note": "Primary metrics, splits and conditions fixed before the held-out run. The 'lucid_hybrid' condition and the paraphrase query style were added after inspecting the development split (seed 1); that exposure is disclosed in the report.",
+  "memory_suite": {
+    "keyword": {
+      "n": 300,
+      "seed": 20261027,
+      "budget_tokens": 150,
+      "accuracy": {
+        "recency_last_k": {
+          "mean": 0.257,
+          "wilson95": [
+            0.211,
+            0.309
+          ]
+        },
+        "history_in_context": {
+          "mean": 0.24,
+          "wilson95": [
+            0.195,
+            0.291
+          ]
+        },
+        "lucid_no_supersede": {
+          "mean": 0.54,
+          "wilson95": [
+            0.483,
+            0.596
+          ]
+        },
+        "lucid_retrieval": {
+          "mean": 1.0,
+          "wilson95": [
+            0.987,
+            1.0
+          ]
+        },
+        "lucid_hybrid": {
+          "mean": 1.0,
+          "wilson95": [
+            0.987,
+            1.0
+          ]
+        }
+      },
+      "primary_diff": {
+        "comparison": "lucid_retrieval - history_in_context",
+        "mean": 0.76,
+        "ci95": [
+          0.71,
+          0.807
+        ],
+        "sign_test_p": 4.636507688359277e-69
+      },
+      "hybrid_vs_retrieval": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "wall_s": 14.11
+    },
+    "paraphrase": {
+      "n": 300,
+      "seed": 20261027,
+      "budget_tokens": 150,
+      "accuracy": {
+        "recency_last_k": {
+          "mean": 0.257,
+          "wilson95": [
+            0.211,
+            0.309
+          ]
+        },
+        "history_in_context": {
+          "mean": 0.24,
+          "wilson95": [
+            0.195,
+            0.291
+          ]
+        },
+        "lucid_no_supersede": {
+          "mean": 0.05,
+          "wilson95": [
+            0.031,
+            0.081
+          ]
+        },
+        "lucid_retrieval": {
+          "mean": 0.077,
+          "wilson95": [
+            0.052,
+            0.112
+          ]
+        },
+        "lucid_hybrid": {
+          "mean": 0.097,
+          "wilson95": [
+            0.068,
+            0.135
+          ]
+        }
+      },
+      "primary_diff": {
+        "comparison": "lucid_retrieval - history_in_context",
+        "mean": -0.163,
+        "ci95": [
+          -0.223,
+          -0.107
+        ],
+        "sign_test_p": 1.7769640600713887e-07
+      },
+      "hybrid_vs_retrieval": [
+        0.02,
+        0.007,
+        0.037
+      ],
+      "wall_s": 13.96
+    }
+  },
+  "correction_suite": {
+    "n": 400,
+    "seed": 20261028,
+    "initially_correct": 208,
+    "conditions": {
+      "no_review": {
+        "final_correct": 0.52,
+        "corruption_rate": 0.0,
+        "corruption_wilson95": [
+          0.0,
+          0.018
+        ],
+        "fix_rate": 0.0
+      },
+      "naive": {
+        "final_correct": 0.36,
+        "corruption_rate": 0.644,
+        "corruption_wilson95": [
+          0.577,
+          0.706
+        ],
+        "fix_rate": 0.365
+      },
+      "guarded": {
+        "final_correct": 0.792,
+        "corruption_rate": 0.0,
+        "corruption_wilson95": [
+          0.0,
+          0.018
+        ],
+        "fix_rate": 0.568
+      }
+    },
+    "primary_diff": {
+      "comparison": "corruption(guarded) - corruption(naive)",
+      "mean": -0.644,
+      "ci95": [
+        -0.707,
+        -0.577
+      ]
+    }
+  },
+  "live_model_suite": {
+    "status": "not run",
+    "requires": "LUCID_ENABLE_PAID_CALLS=1, ANTHROPIC_API_KEY, a budget ledger, and a frozen model version",
+    "conditions": [
+      "baseline",
+      "full",
+      "no_memory",
+      "no_monitor",
+      "no_review",
+      "no_correction",
+      "relevant_history_in_context"
+    ]
+  },
+  "experiments": [
+    {
+      "id": "exp_6f4d5dcb7cf94efba84f",
+      "module": "discovery",
+      "title": "Recurrence for binary strings without '111'",
+      "hypothesis": "The count obeys a low-order integer linear recurrence",
+      "prediction": "A recurrence fitted on n\u22648 matches exhaustive counts for n=9..22",
+      "config": {
+        "dev_range": [
+          0,
+          8
+        ],
+        "evaluator": "exhaustive enumeration",
+        "heldout_range": [
+          9,
+          22
+        ],
+        "literature_note": "known result (tribonacci-type); positive control",
+        "search": "order\u22644, coefficients in [-2,2]"
+      },
+      "result": {
+        "alternatives_failing_heldout": 0,
+        "claim_bounds": "agreement verified exhaustively for n \u2264 22; no proof for all n",
+        "dev_sequence": [
+          1,
+          2,
+          4,
+          7,
+          13,
+          24,
+          44,
+          81,
+          149
+        ],
+        "heldout_mismatches": {},
+        "n_candidates_consistent_with_dev": 4,
+        "selected": {
+          "coefs": [
+            1,
+            1,
+            1
+          ],
+          "complexity": 6,
+          "order": 3
+        }
+      },
+      "status": "empirically_supported",
+      "criticism": "Finite agreement is not a proof. A combinatorial proof exists in the literature (transfer-matrix / last-run argument) but was not machine-checked here. Simplicity ordering is a bias, not evidence.",
+      "revision_of": null,
+      "cost": {},
+      "created_at": "2026-10-27T18:59:47.813670Z",
+      "updated_at": "2026-10-27T18:59:50.834044Z"
+    },
+    {
+      "id": "exp_31491dfe09d349f4a1aa",
+      "module": "discovery",
+      "title": "Euler polynomial primality (falsification control)",
+      "hypothesis": "n^2+n+41 is prime for all n \u2265 0",
+      "prediction": "No counterexample for n \u2264 1000",
+      "config": {
+        "limit": 1000,
+        "method": "exhaustive counterexample search"
+      },
+      "result": {
+        "counterexample": {
+          "factor": 41,
+          "n": 40,
+          "value": 1681
+        },
+        "independently_checkable": true
+      },
+      "status": "disproven",
+      "criticism": "A single checkable counterexample refutes the claim.",
+      "revision_of": null,
+      "cost": {},
+      "created_at": "2026-10-27T18:59:50.836214Z",
+      "updated_at": "2026-10-27T18:59:50.837025Z"
+    },
+    {
+      "id": "exp_dd318d1230064f15a472",
+      "module": "consciousness",
+      "title": "GW-1: global availability ablation (functional analogue)",
+      "hypothesis": "Integration tasks causally depend on broadcast of module contents",
+      "prediction": "broadcast \u226b no_broadcast on integration tasks; no difference on local tasks; scrambled and information-matched controls do not rescue integration",
+      "config": {
+        "basis": "Butlin et al. 2023 GWT-indicators (application-level analogue)",
+        "capacity": 4,
+        "conditions": [
+          "broadcast",
+          "no_broadcast",
+          "scrambled",
+          "matched_local_only"
+        ],
+        "modules": 4,
+        "n": 400,
+        "seed": 7
+      },
+      "result": {
+        "accuracy": {
+          "broadcast": {
+            "integration": 1.0,
+            "local": 1.0
+          },
+          "matched_local_only": {
+            "integration": 0.0,
+            "local": 1.0
+          },
+          "no_broadcast": {
+            "integration": 0.0,
+            "local": 1.0
+          },
+          "scrambled": {
+            "integration": 0.0,
+            "local": 0.0
+          }
+        },
+        "claim_bounds": "In this deterministic architecture, broadcast is causally necessary for integration tasks. This is a property of the designed system, not evidence of experience.",
+        "integration_effect_broadcast_minus_ablated": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "local_effect_broadcast_minus_ablated": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "n_integration": 202,
+        "n_local": 198,
+        "observations": [
+          "scrambled broadcast also impaired LOCAL tasks (it overwrote modules' own correct facts), so the disruption control is not specific to integration"
+        ]
+      },
+      "status": "empirically_supported",
+      "criticism": "The dissociation is close to guaranteed by construction (modules only know their slices), so the experiment mainly validates the ablation/controls methodology. A stronger test needs learned modules whose dependence on broadcast is not designed in, e.g. an open-weight model with real activation access (see ActivationProbe).",
+      "revision_of": null,
+      "cost": {},
+      "created_at": "2026-10-27T18:59:50.839241Z",
+      "updated_at": "2026-10-27T18:59:51.668181Z"
+    },
+    {
+      "id": "exp_28bfe43fa76d4dfa9498",
+      "module": "consciousness",
+      "title": "HO-1: monitoring/abstention ablation (functional analogue)",
+      "hypothesis": "A monitor estimating reliability from observable evidence improves calibration",
+      "prediction": "Lower Brier score and higher selective accuracy with the monitor",
+      "config": {
+        "basis": "higher-order monitoring indicators (Butlin et al. 2023), application level",
+        "n": 400,
+        "seed": 11,
+        "threshold": 0.6
+      },
+      "result": {
+        "brier_with_monitor": 0.1663,
+        "brier_without": 0.1737,
+        "claim_bounds": "calibration benefit of an explicit monitor in a simulated solver; no claim about awareness",
+        "coverage_with_abstention": 0.345,
+        "overall_majority_accuracy": 0.777,
+        "selective_accuracy": 0.935
+      },
+      "status": "empirically_supported",
+      "criticism": "Simulated solver with known noise; real effect sizes require live model runs.",
+      "revision_of": null,
+      "cost": {},
+      "created_at": "2026-10-27T18:59:51.671842Z",
+      "updated_at": "2026-10-27T18:59:51.673450Z"
+    }
+  ],
+  "wall_s": 32.37,
+  "cost": {
+    "model_calls": 0,
+    "tokens": 0,
+    "usd": 0.0
+  }
+}

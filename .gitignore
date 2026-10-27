@@ -8,6 +8,8 @@ dashboard/dist/
 *.db-wal
 *.db-shm
 .lucid/
-dist/
+dist/*
 build/
 .venv/
+skill/lucid/scripts/lib/
+!dist/lucid-skill.zip

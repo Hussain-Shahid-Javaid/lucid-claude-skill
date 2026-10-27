@@ -290,7 +290,13 @@ class MemoryStore:
 
     def search(self, query: str, scope: Scope = Scope(), *, kinds: Iterable[str] | None = None, limit: int = 20,
                budget_tokens: int = 1500, include_unverified: bool = True,
-               include_disputed: bool = True) -> SearchResult:
+               include_disputed: bool = True, backfill_recent: bool = False) -> SearchResult:
+        """Ranked lexical retrieval within a token budget.
+
+        backfill_recent: after ranked matches, fill any remaining budget with the most
+        recent active memories (marked why.backfill=True). Helps when the query shares no
+        vocabulary with the stored text; adds unrelated items otherwise.
+        """
         kinds = set(kinds or [])
         fq = _fts_query(query)
         now = self.s.clock.now()
@@ -352,6 +358,21 @@ class MemoryStore:
             parts.append(line)
             used += t
         omitted += max(0, len(scored) - limit)
+        if backfill_recent and fq:
+            seen = {m["id"] for m in items}
+            recent = self.search("", scope, kinds=kinds or None, limit=limit, budget_tokens=10**9,
+                                 include_unverified=include_unverified, include_disputed=include_disputed).items
+            for m in recent:
+                if m["id"] in seen:
+                    continue
+                line = render_memory(m)
+                t = approx_tokens(line)
+                if used + t > budget_tokens:
+                    break
+                m["why"] = {**m["why"], "backfill": True}
+                items.append(m)
+                parts.append(line)
+                used += t
         return SearchResult(items, "\n".join(parts) if items else "", used if items else 0, budget_tokens, omitted,
                             {"fts_query": fq, "candidates": len(scored),
                              "ranking": "bm25 x recency(half-life ~62d) x verification weight"})

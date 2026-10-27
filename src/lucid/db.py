@@ -46,6 +46,8 @@ class Store:
         if self.path != ":memory:":
             d = os.path.dirname(os.path.abspath(self.path))
             os.makedirs(d, exist_ok=True)
+            if not os.path.exists(self.path):  # private by default: memories are personal data
+                os.close(os.open(self.path, os.O_CREAT | os.O_WRONLY, 0o600))
         conn = sqlite3.connect(self.path, check_same_thread=False, isolation_level=None, timeout=30)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys=ON")

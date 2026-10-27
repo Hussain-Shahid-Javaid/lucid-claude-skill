@@ -1,0 +1,20 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <h1>Lucid Capture</h1>
+  <p id="site" class="muted"></p>
+  <p id="status" role="status"></p>
+  <div class="buttons">
+    <button id="sel">Save selection</button>
+    <button id="page">Save page</button>
+    <button id="conv">Capture conversation</button>
+  </div>
+  <fieldset>
+    <legend>This site</legend>
+    <label><input type="checkbox" id="enabled"> Allow capture</label>
+    <label><input type="checkbox" id="auto"> Automatic capture</label>
+    <label><input type="checkbox" id="paused"> Paused</label>
+  </fieldset>
+  <p class="muted small">Only sends to your local Lucid service. Passwords and form fields are never captured. Delete captures from the Lucid dashboard.</p>
+  <script src="popup.js"></script>
+</body></html>

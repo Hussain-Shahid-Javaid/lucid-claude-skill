@@ -345,9 +345,9 @@ def cmd_sync(args) -> int:
 
 
 def cmd_serve(args) -> int:
-    from .server.app import serve
-    serve(args.db, host=args.host, port=args.port)
-    return 0
+    from .server.app import main as serve_main
+    extra = ["--db", args.db] if args.db else []
+    return serve_main(extra + args.rest)
 
 
 def cmd_mcp(args) -> int:
@@ -597,9 +597,8 @@ def build_parser() -> argparse.ArgumentParser:
     common(sy.add_parser("status"))
     common(sy.add_parser("recover"))
 
-    x = common(sub.add_parser("serve", help="run dashboard + API (localhost)"))
-    x.add_argument("--host", default="127.0.0.1")
-    x.add_argument("--port", type=int, default=8765)
+    x = sub.add_parser("serve", help="run dashboard + API (localhost); see `lucid serve --help`")
+    x.add_argument("rest", nargs=argparse.REMAINDER)
     common(sub.add_parser("mcp", help="run MCP server on stdio"))
     x = sub.add_parser("eval", help="evaluation runner")
     x.add_argument("rest", nargs=argparse.REMAINDER)

@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Lucid Capture",
+  "version": "0.1.0",
+  "description": "Save selected text, pages, or supported conversations to your local Lucid service — only when you ask, or on sites you explicitly enable.",
+  "action": { "default_popup": "popup.html", "default_title": "Lucid Capture" },
+  "background": { "service_worker": "background.js" },
+  "options_page": "options.html",
+  "permissions": ["activeTab", "scripting", "storage", "contextMenus"],
+  "host_permissions": ["http://127.0.0.1/*", "http://localhost/*"],
+  "optional_host_permissions": ["https://*/*"]
+}

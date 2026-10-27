@@ -1,0 +1,4 @@
+body { font: 13px system-ui, sans-serif; width: 300px; margin: 12px; }
+h1 { font-size: 15px; margin: 0 0 6px; } .muted { color: #666; } .small { font-size: 11px; }
+.buttons { display: grid; gap: 6px; margin: 8px 0; } button { padding: 6px; }
+fieldset { border: 1px solid #ddd; border-radius: 6px; display: grid; gap: 4px; }

@@ -469,6 +469,30 @@ class MemoryStore:
         self.s.log(actor, "memory.delete", "memory", mid, {"reason": reason, "invalidated": derived})
         return {"id": mid, "deleted": True, "invalidated_derived": derived}
 
+    def delete_source(self, sid: str, *, reason: str = "user request", actor: str = "user") -> dict:
+        """Delete a captured source; memories whose only support it was are invalidated."""
+        with self.s.tx() as c:
+            r = c.execute("SELECT content_hash FROM sources WHERE id=?", (sid,)).fetchone()
+            if not r:
+                raise MemoryError("source not found")
+            c.execute("UPDATE sources SET content=NULL, title=NULL, metadata='{}' WHERE id=?", (sid,))
+            c.execute("INSERT OR REPLACE INTO tombstones VALUES ('source',?,?,?,?)",
+                      (sid, f"source:{r[0]}", self.s.clock.iso(), reason))
+            invalidated = []
+            for (mid,) in c.execute("SELECT DISTINCT memory_id FROM memory_evidence WHERE source_id=?", (sid,)).fetchall():
+                c.execute("DELETE FROM memory_evidence WHERE memory_id=? AND source_id=?", (mid, sid))
+                left = c.execute("SELECT COUNT(*) FROM memory_evidence WHERE memory_id=?", (mid,)).fetchone()[0]
+                m = c.execute("SELECT origin, verification FROM memories WHERE id=?", (mid,)).fetchone()
+                if not left and m and m[0] in ("import", "lucid_summary"):
+                    c.execute("UPDATE memories SET status='invalidated', updated_at=? WHERE id=?", (self.s.clock.iso(), mid))
+                    c.execute("DELETE FROM memories_fts WHERE memory_id=?", (mid,))
+                    invalidated.append(mid)
+                elif not left and m and m[1] == "verified":
+                    c.execute("UPDATE memories SET verification='unverified', updated_at=? WHERE id=?",
+                              (self.s.clock.iso(), mid))
+        self.s.log(actor, "source.delete", "source", sid, {"invalidated": invalidated})
+        return {"id": sid, "deleted": True, "invalidated_memories": invalidated}
+
     def purge_expired(self) -> list[str]:
         now = self.s.clock.iso()
         ids = [r[0] for r in self.s.q("SELECT id FROM memories WHERE status='active' AND expires_at IS NOT NULL"

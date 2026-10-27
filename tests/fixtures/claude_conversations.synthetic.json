@@ -1,0 +1,43 @@
+[
+ {
+  "uuid": "c-claude-1",
+  "name": "Plan the trip",
+  "created_at": "2026-01-02T10:00:00Z",
+  "updated_at": "2026-01-02T10:05:00Z",
+  "_fixture_note": "SYNTHETIC: shaped after community descriptions (chat_messages/sender); field names partly unverified",
+  "chat_messages": [
+   {
+    "uuid": "m1",
+    "sender": "human",
+    "text": "I prefer window seats. Remember that.",
+    "created_at": "2026-01-02T10:00:00Z",
+    "attachments": [],
+    "files": []
+   },
+   {
+    "uuid": "m2",
+    "sender": "assistant",
+    "text": "",
+    "content": [
+     {
+      "type": "text",
+      "text": "Noted: window seats."
+     }
+    ],
+    "created_at": "2026-01-02T10:00:05Z"
+   },
+   {
+    "uuid": "m3",
+    "sender": "human",
+    "text": "ok",
+    "created_at": "2026-01-02T10:01:00Z"
+   },
+   {
+    "uuid": "m4",
+    "sender": "human",
+    "text": "ok",
+    "created_at": "2026-01-02T10:02:00Z"
+   }
+  ]
+ }
+]

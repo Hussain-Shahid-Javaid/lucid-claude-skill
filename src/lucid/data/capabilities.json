@@ -1,0 +1,509 @@
+{
+ "verified": "2026-10-27",
+ "method": "official documentation review (see docs/compatibility.md); no live account testing unless stated",
+ "hosts": [
+  {
+   "id": "claude-code",
+   "name": "Claude Code",
+   "lucid_support": "primary (installable skill + CLI + optional MCP)",
+   "capabilities": {
+    "skill_discovery": {
+     "status": "supported",
+     "note": "~/.claude/skills, .claude/skills, plugins; /lucid invocation",
+     "sources": [
+      "https://code.claude.com/docs/en/skills"
+     ]
+    },
+    "script_execution": {
+     "status": "supported",
+     "note": "bundled scripts run via Bash tool",
+     "sources": [
+      "https://code.claude.com/docs/en/skills"
+     ]
+    },
+    "persistent_storage": {
+     "status": "supported",
+     "note": "local filesystem; Lucid uses $LUCID_HOME (~/.lucid)",
+     "sources": [
+      "https://code.claude.com/docs/en/sessions"
+     ]
+    },
+    "tool_calling": {
+     "status": "supported",
+     "note": "built-in tools + MCP",
+     "sources": [
+      "https://code.claude.com/docs/en/skills"
+     ]
+    },
+    "subagents": {
+     "status": "supported",
+     "note": "Task/subagents; nest up to 3 levels",
+     "sources": [
+      "https://code.claude.com/docs/en/sub-agents"
+     ]
+    },
+    "background_scheduling": {
+     "status": "supported",
+     "note": "/loop, desktop and cloud scheduled tasks",
+     "sources": [
+      "https://code.claude.com/docs/en/scheduled-tasks"
+     ]
+    },
+    "mcp": {
+     "status": "supported",
+     "note": "stdio and HTTP MCP servers",
+     "sources": [
+      "https://code.claude.com/docs/en/skills"
+     ]
+    },
+    "activity_telemetry": {
+     "status": "supported",
+     "note": "OpenTelemetry export",
+     "sources": [
+      "https://code.claude.com/docs/en/monitoring-usage"
+     ]
+    },
+    "transcript_import_export": {
+     "status": "supported",
+     "note": "/export and local JSONL session files",
+     "sources": [
+      "https://code.claude.com/docs/en/sessions"
+     ]
+    },
+    "native_conversation_updates": {
+     "status": "supported",
+     "note": "local sessions only: claude -p --resume / Agent SDK",
+     "sources": [
+      "https://code.claude.com/docs/en/sessions"
+     ]
+    }
+   }
+  },
+  {
+   "id": "claude-ai",
+   "name": "Claude.ai web & desktop",
+   "lucid_support": "skill upload (standard frontmatter only); remote MCP connector if self-hosted with auth",
+   "capabilities": {
+    "skill_discovery": {
+     "status": "supported",
+     "note": "ZIP upload; only the six standard frontmatter fields",
+     "sources": [
+      "https://support.claude.com/en/articles/12512180-use-skills-in-claude",
+      "https://code.claude.com/docs/en/skills"
+     ]
+    },
+    "script_execution": {
+     "status": "supported",
+     "note": "requires code execution enabled; sandbox storage is not persistent across chats",
+     "sources": [
+      "https://support.claude.com/en/articles/12512180-use-skills-in-claude"
+     ]
+    },
+    "persistent_storage": {
+     "status": "unverified",
+     "note": "product memory exists, but no documented skill-writable persistent store",
+     "sources": [
+      "https://support.claude.com/en/articles/12123587-import-and-export-your-memory-from-claude"
+     ]
+    },
+    "tool_calling": {
+     "status": "supported",
+     "note": "via connectors",
+     "sources": [
+      "https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp"
+     ]
+    },
+    "subagents": {
+     "status": "unverified",
+     "note": "no documented user-configurable subagents",
+     "sources": []
+    },
+    "background_scheduling": {
+     "status": "supported",
+     "note": "Cowork scheduled tasks on paid plans",
+     "sources": [
+      "https://support.claude.com/en/articles/13854387-schedule-recurring-tasks-in-claude-cowork"
+     ]
+    },
+    "mcp": {
+     "status": "supported",
+     "note": "remote MCP via custom connectors; local MCP in Desktop config",
+     "sources": [
+      "https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp"
+     ]
+    },
+    "activity_telemetry": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    },
+    "transcript_import_export": {
+     "status": "supported",
+     "note": "account export (link expires in 24h); memory import experimental",
+     "sources": [
+      "https://support.claude.com/en/articles/9450526-export-your-claude-data",
+      "https://support.claude.com/en/articles/12123587-import-and-export-your-memory-from-claude"
+     ]
+    },
+    "native_conversation_updates": {
+     "status": "unverified",
+     "note": "no documented third-party API to write chat history",
+     "sources": []
+    }
+   }
+  },
+  {
+   "id": "chatgpt",
+   "name": "ChatGPT (web/desktop)",
+   "lucid_support": "export import adapter; MCP via developer-mode apps if self-hosted",
+   "capabilities": {
+    "skill_discovery": {
+     "status": "supported",
+     "note": "desktop app; on web/mobile only inside plugins",
+     "sources": [
+      "https://learn.chatgpt.com/docs/build-skills"
+     ]
+    },
+    "script_execution": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    },
+    "persistent_storage": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    },
+    "tool_calling": {
+     "status": "supported",
+     "note": "apps/connectors",
+     "sources": [
+      "https://developers.openai.com/plugins/deploy/connect-chatgpt"
+     ]
+    },
+    "subagents": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    },
+    "background_scheduling": {
+     "status": "supported",
+     "note": "scheduled tasks, plan-limited",
+     "sources": [
+      "https://help.openai.com/en/articles/10291617-scheduled-tasks-in-chatgpt"
+     ]
+    },
+    "mcp": {
+     "status": "supported",
+     "note": "custom MCP server over Streamable HTTP",
+     "sources": [
+      "https://developers.openai.com/plugins/deploy/connect-chatgpt"
+     ]
+    },
+    "activity_telemetry": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    },
+    "transcript_import_export": {
+     "status": "supported",
+     "note": "export ZIP (link valid ~7 days); no import",
+     "sources": [
+      "https://help.openai.com/en/articles/7260999-exporting-your-chatgpt-history-and-data"
+     ]
+    },
+    "native_conversation_updates": {
+     "status": "unverified",
+     "note": "API Conversations object is not linked to ChatGPT history",
+     "sources": [
+      "https://developers.openai.com/api/docs/guides/conversation-state"
+     ]
+    }
+   }
+  },
+  {
+   "id": "gemini-app",
+   "name": "Gemini app (consumer)",
+   "lucid_support": "Takeout activity import (unverified schema)",
+   "capabilities": {
+    "skill_discovery": {
+     "status": "supported",
+     "note": "SKILL.md folder or ZIP upload",
+     "sources": [
+      "https://support.google.com/gemini/answer/17094296"
+     ]
+    },
+    "script_execution": {
+     "status": "experimental",
+     "note": "scripts accepted; execution model undocumented, no internet",
+     "sources": [
+      "https://support.google.com/gemini/answer/17094296"
+     ]
+    },
+    "persistent_storage": {
+     "status": "supported",
+     "note": "Keep Activity (product-managed)",
+     "sources": [
+      "https://support.google.com/gemini/answer/16920332"
+     ]
+    },
+    "tool_calling": {
+     "status": "supported",
+     "note": "custom apps",
+     "sources": [
+      "https://support.google.com/gemini/answer/17209137"
+     ]
+    },
+    "subagents": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    },
+    "background_scheduling": {
+     "status": "supported",
+     "note": "scheduled actions, gradual rollout",
+     "sources": [
+      "https://support.google.com/gemini/answer/16316416"
+     ]
+    },
+    "mcp": {
+     "status": "supported",
+     "note": "restricted: US, 18+, personal accounts, web",
+     "sources": [
+      "https://support.google.com/gemini/answer/17209137"
+     ]
+    },
+    "activity_telemetry": {
+     "status": "unsupported",
+     "note": "My Activity only",
+     "sources": [
+      "https://support.google.com/gemini/answer/16920332"
+     ]
+    },
+    "transcript_import_export": {
+     "status": "supported",
+     "note": "Takeout export; imports ChatGPT/Claude ZIPs outside EEA/UK/CH",
+     "sources": [
+      "https://support.google.com/gemini/answer/16920332",
+      "https://support.google.com/gemini/answer/16868299"
+     ]
+    },
+    "native_conversation_updates": {
+     "status": "unsupported",
+     "note": "only user-uploaded imports",
+     "sources": [
+      "https://support.google.com/gemini/answer/16868299"
+     ]
+    }
+   }
+  },
+  {
+   "id": "gemini-cli-api",
+   "name": "Gemini CLI / Gemini API",
+   "lucid_support": "skill + MCP via CLI extensions (paid API keys); API function calling",
+   "capabilities": {
+    "skill_discovery": {
+     "status": "supported",
+     "note": "Gemini CLI skills; consumer accounts moved to Antigravity CLI on 2026-06-18",
+     "sources": [
+      "https://geminicli.com/docs/cli/skills/",
+      "https://developers.googleblog.com/en/an-important-update-transitioning-gemini-cli-to-antigravity-cli/"
+     ]
+    },
+    "script_execution": {
+     "status": "unverified",
+     "note": "bundling documented; execution not",
+     "sources": [
+      "https://geminicli.com/docs/cli/skills/"
+     ]
+    },
+    "persistent_storage": {
+     "status": "supported",
+     "note": "resumable CLI sessions",
+     "sources": [
+      "https://geminicli.com/docs/"
+     ]
+    },
+    "tool_calling": {
+     "status": "supported",
+     "note": "function calling",
+     "sources": [
+      "https://ai.google.dev/gemini-api/docs/function-calling"
+     ]
+    },
+    "subagents": {
+     "status": "experimental",
+     "note": "preview",
+     "sources": [
+      "https://geminicli.com/docs/extensions/reference/",
+      "https://geminicli.com/docs/"
+     ]
+    },
+    "background_scheduling": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    },
+    "mcp": {
+     "status": "supported",
+     "note": "stdio, SSE, HTTP, OAuth",
+     "sources": [
+      "https://geminicli.com/docs/tools/mcp-server"
+     ]
+    },
+    "activity_telemetry": {
+     "status": "supported",
+     "note": "CLI telemetry documented",
+     "sources": [
+      "https://geminicli.com/docs/"
+     ]
+    },
+    "transcript_import_export": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    },
+    "native_conversation_updates": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    }
+   }
+  },
+  {
+   "id": "generic-skills",
+   "name": "Generic Agent Skills hosts (e.g. OpenAI Codex)",
+   "lucid_support": "portable SKILL.md + CLI where the host runs scripts",
+   "capabilities": {
+    "skill_discovery": {
+     "status": "supported",
+     "note": "Codex reads .agents/skills; OpenAI API supports skills",
+     "sources": [
+      "https://learn.chatgpt.com/docs/build-skills",
+      "https://developers.openai.com/api/docs/guides/tools-skills"
+     ]
+    },
+    "script_execution": {
+     "status": "supported",
+     "note": "scripts/ directory (host dependent)",
+     "sources": [
+      "https://learn.chatgpt.com/docs/build-skills"
+     ]
+    },
+    "persistent_storage": {
+     "status": "unverified",
+     "note": "host dependent",
+     "sources": []
+    },
+    "tool_calling": {
+     "status": "supported",
+     "note": "",
+     "sources": [
+      "https://learn.chatgpt.com/docs/extend/mcp?surface=cli"
+     ]
+    },
+    "subagents": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    },
+    "background_scheduling": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    },
+    "mcp": {
+     "status": "supported",
+     "note": "Codex: stdio and HTTP",
+     "sources": [
+      "https://learn.chatgpt.com/docs/extend/mcp?surface=cli"
+     ]
+    },
+    "activity_telemetry": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    },
+    "transcript_import_export": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    },
+    "native_conversation_updates": {
+     "status": "unverified",
+     "note": "",
+     "sources": []
+    }
+   }
+  },
+  {
+   "id": "generic-mcp",
+   "name": "Generic MCP clients",
+   "lucid_support": "lucid-mcp stdio server (2025-11-25 initialize style and 2026-07-28 per-request style)",
+   "capabilities": {
+    "skill_discovery": {
+     "status": "unsupported",
+     "note": "MCP has no skills primitive (working group only)",
+     "sources": [
+      "https://modelcontextprotocol.io/specification/2026-07-28/changelog"
+     ]
+    },
+    "script_execution": {
+     "status": "n/a",
+     "note": "",
+     "sources": []
+    },
+    "persistent_storage": {
+     "status": "n/a",
+     "note": "server-side only (Lucid stores data locally)",
+     "sources": [
+      "https://modelcontextprotocol.io/specification/2026-07-28/server/tools.md"
+     ]
+    },
+    "tool_calling": {
+     "status": "supported",
+     "note": "tools/list, tools/call",
+     "sources": [
+      "https://modelcontextprotocol.io/specification/2026-07-28/server/tools.md"
+     ]
+    },
+    "subagents": {
+     "status": "unsupported",
+     "note": "",
+     "sources": []
+    },
+    "background_scheduling": {
+     "status": "experimental",
+     "note": "tasks extension",
+     "sources": [
+      "https://modelcontextprotocol.io/specification/2026-07-28/changelog"
+     ]
+    },
+    "mcp": {
+     "status": "supported",
+     "note": "",
+     "sources": [
+      "https://modelcontextprotocol.io/specification/2026-07-28/changelog"
+     ]
+    },
+    "activity_telemetry": {
+     "status": "experimental",
+     "note": "OTel _meta keys",
+     "sources": [
+      "https://modelcontextprotocol.io/specification/2026-07-28/changelog"
+     ]
+    },
+    "transcript_import_export": {
+     "status": "n/a",
+     "note": "",
+     "sources": []
+    },
+    "native_conversation_updates": {
+     "status": "n/a",
+     "note": "",
+     "sources": []
+    }
+   }
+  }
+ ]
+}

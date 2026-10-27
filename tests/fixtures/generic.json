@@ -1,0 +1,32 @@
+{
+ "format": "lucid.conversation.v1",
+ "conversations": [
+  {
+   "provider": "local-notes",
+   "account": "work",
+   "id": "g1",
+   "title": "Generic branching",
+   "current_leaf": "b2",
+   "messages": [
+    {
+     "id": "a",
+     "parent": null,
+     "role": "user",
+     "content": "Pick a DB"
+    },
+    {
+     "id": "b1",
+     "parent": "a",
+     "role": "assistant",
+     "content": "Use Postgres"
+    },
+    {
+     "id": "b2",
+     "parent": "a",
+     "role": "assistant",
+     "content": "Use SQLite for local mode"
+    }
+   ]
+  }
+ ]
+}

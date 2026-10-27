@@ -1,0 +1,16 @@
+[
+ {
+  "header": "Gemini Apps",
+  "title": "Prompted Explain recursion briefly",
+  "time": "2026-01-03T09:00:00.000Z",
+  "_fixture_note": "SYNTHETIC: Takeout My Activity shape is unverified",
+  "safeHtmlItem": [
+   {
+    "html": "<p>Recursion is when a function calls <b>itself</b>.</p><script>alert(1)</script>"
+   }
+  ],
+  "products": [
+   "Gemini Apps"
+  ]
+ }
+]

@@ -75,6 +75,6 @@ lucid eval run --split heldout           # regenerates reports/evaluation-heldou
 - [Conversation exchange format](docs/exchange-format.md)
 - [Budgets](docs/budgets.md) · [Decisions & autonomy](docs/decisions.md) · [Security & privacy](docs/security.md)
 - [Browser extension](docs/extension.md) · [Evaluation methodology](docs/evaluation.md) · [Research protocols](docs/research-protocols.md)
-- [Implementation status & limitations](docs/status.md)
+- [Implementation status & limitations](docs/status.md) · [Changelog](CHANGELOG.md) · [v0.1.0 release notes](docs/releases/v0.1.0.md)
 
 License: MIT.

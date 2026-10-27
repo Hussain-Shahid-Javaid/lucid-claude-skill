@@ -107,6 +107,8 @@ class Store:
             for version, name, sql in _migration_files():
                 if version in done:
                     continue
+                # Table rebuilds need FK enforcement off (standard SQLite procedure); checked after.
+                self.conn.execute("PRAGMA foreign_keys=OFF")
                 self.conn.execute("BEGIN IMMEDIATE")
                 try:
                     for stmt in _split_sql(sql):
@@ -114,10 +116,15 @@ class Store:
                     self.conn.execute(
                         "INSERT INTO schema_migrations VALUES (?,?,?)", (version, name, self.clock.iso())
                     )
+                    bad = self.conn.execute("PRAGMA foreign_key_check").fetchall()
+                    if bad:
+                        raise RuntimeError(f"migration {name} broke foreign keys: {bad[:3]}")
                     self.conn.execute("COMMIT")
                 except BaseException:
                     self.conn.execute("ROLLBACK")
                     raise
+                finally:
+                    self.conn.execute("PRAGMA foreign_keys=ON")
                 applied.append(name)
         return applied
 
@@ -145,6 +152,8 @@ class Store:
     # -- backup / restore -------------------------------------------------
     def backup(self, dest: str) -> str:
         os.makedirs(os.path.dirname(os.path.abspath(dest)) or ".", exist_ok=True)
+        if not os.path.exists(dest):  # backups contain personal data: owner-only
+            os.close(os.open(dest, os.O_CREAT | os.O_WRONLY, 0o600))
         with self._lock:
             target = sqlite3.connect(dest)
             try:

@@ -169,3 +169,30 @@ def test_monitor_calibration(L):
         m.resolve_prediction(ids[0], False)  # write-once outcomes
     cal = m.calibration()
     assert cal["n"] == 4 and cal["brier"] == round((0.01 + 0.81 + 0.04 + 0.16) / 4, 4)
+
+
+def test_timed_out_worker_keeps_paths_reserved(L):
+    import threading as _th
+    co = Coordinator(L.store, concurrency=3, worker_timeout_s=0.2)
+    slow = co.spawn(None, "slow", acceptance=["x"], owned_paths=["src"])
+    fast = co.spawn(None, "fast", acceptance=["x"], owned_paths=["src/mod.py"])
+    live, overlap, lock = set(), [], _th.Lock()
+
+    def work(ctx):
+        with lock:
+            if live:
+                overlap.append(ctx.task["title"])
+            live.add(ctx.task["title"])
+        try:
+            if ctx.task["title"] == "slow":
+                for _ in range(10):      # ignores the deadline for a while, then notices cancellation
+                    time.sleep(0.06)
+                ctx.token.checkpoint()
+            return _ok(ctx)
+        finally:
+            with lock:
+                live.discard(ctx.task["title"])
+    res = co.run([slow["id"], fast["id"]], FunctionRunner(work))
+    assert overlap == []
+    assert res["statuses"][slow["id"]] == "failed" and res["statuses"][fast["id"]] == "completed"
+    assert any(e["event"] == "timeout" for e in co.events)

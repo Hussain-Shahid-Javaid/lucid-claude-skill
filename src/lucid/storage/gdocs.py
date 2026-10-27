@@ -105,34 +105,56 @@ class TokenStore:
             return None
 
 
+def u16(s: str) -> int:
+    """Length in UTF-16 code units — the unit Google Docs uses for indices."""
+    return len(s.encode("utf-16-le")) // 2
+
+
+def _runs(doc: dict):
+    """Yield (startIndex, text) for every text run in the body, in order. Non-paragraph elements
+    (tables, section breaks) are skipped, but positions always come from the API's own indices."""
+    def walk(content):
+        for el in content:
+            if "paragraph" in el:
+                for pe in el["paragraph"].get("elements", []):
+                    tr = pe.get("textRun")
+                    if tr is not None and "startIndex" in pe:
+                        yield pe["startIndex"], tr.get("content", "")
+            elif "table" in el:
+                for row in el["table"].get("tableRows", []):
+                    for cell in row.get("tableCells", []):
+                        yield from walk(cell.get("content", []))
+    yield from walk(doc.get("body", {}).get("content", []))
+
+
 def doc_text(doc: dict) -> str:
-    out = []
-    for el in doc.get("body", {}).get("content", []):
-        for pe in (el.get("paragraph") or {}).get("elements", []):
-            out.append((pe.get("textRun") or {}).get("content", ""))
-    return "".join(out)
+    return "".join(t for _, t in _runs(doc))
+
+
+def _index_map(doc: dict) -> tuple[str, list[int]]:
+    """Concatenated text plus, for each Python character, its Docs (UTF-16) index."""
+    chars, idx = [], []
+    for start, text in _runs(doc):
+        pos = start
+        for ch in text:
+            chars.append(ch)
+            idx.append(pos)
+            pos += u16(ch)
+    return "".join(chars), idx
 
 
 def find_section(doc: dict) -> tuple[int, int, str, str | None] | None:
     """Return (start_index, end_index, inner_text, last_op) of the managed section in Docs index space."""
-    text = doc_text(doc)
+    text, idx = _index_map(doc)
     b = text.find(BEGIN)
     if b < 0:
         return None
     m = END_RE.search(text, b)
     if not m:
         raise ConflictError("managed section end marker missing (edited by user?) — manual repair needed")
-    base = _base_index(doc)
     inner = text[b + len(BEGIN) + 1: m.start()]
-    return base + b, base + m.end(), inner, m.group(1) or None
-
-
-def _base_index(doc: dict) -> int:
-    content = doc.get("body", {}).get("content", [])
-    for el in content:
-        if "paragraph" in el:
-            return el.get("startIndex", 1)
-    return 1
+    last = m.end() - 1
+    return idx[b], idx[last] + u16(text[last]), inner, m.group(1) or None
 
 
 def render_section(memories: list[dict], op_id: str) -> str:
@@ -232,12 +254,18 @@ class GoogleDocsBackend:
 
 
 def _end_index(doc: dict) -> int:
+    """Insertion point before the body's final newline."""
     content = doc.get("body", {}).get("content", [])
     return max(1, (content[-1].get("endIndex", 2) - 1) if content else 1)
 
 
 class FakeDocsClient:
-    """In-memory Docs emulation for offline contract tests (index base 1, revision ids, conflicts)."""
+    """In-memory Docs emulation for offline contract tests.
+
+    Mirrors the real API's index model: indices start at 1 and count UTF-16 code units;
+    paragraphs and text runs carry startIndex/endIndex; an optional table element can sit
+    between paragraphs (its cell text occupies index space like in Docs).
+    """
 
     def __init__(self):
         self.docs: dict[str, dict] = {}
@@ -257,11 +285,26 @@ class FakeDocsClient:
     def get(self, did):
         d = self.docs[did]
         content, idx = [], 1
-        for line in d["text"].splitlines(keepends=True):
-            content.append({"startIndex": idx, "endIndex": idx + len(line),
-                            "paragraph": {"elements": [{"textRun": {"content": line}}]}})
-            idx += len(line)
+        for n, line in enumerate(d["text"].splitlines(keepends=True)):
+            ln = u16(line)
+            content.append({"startIndex": idx, "endIndex": idx + ln, "paragraph": {"elements": [
+                {"startIndex": idx, "endIndex": idx + ln, "textRun": {"content": line}}]}})
+            idx += ln
         return {"documentId": did, "title": d["title"], "revisionId": f"r{d['rev']}", "body": {"content": content}}
+
+    @staticmethod
+    def _py(text: str, doc_index: int) -> int:
+        """Convert a Docs index (1-based UTF-16) to a Python string offset."""
+        target, units = doc_index - 1, 0
+        for i, ch in enumerate(text):
+            if units >= target:
+                if units != target:
+                    raise ValueError("index splits a surrogate pair")
+                return i
+            units += u16(ch)
+        if units == target:
+            return len(text)
+        raise ValueError("index out of range")
 
     def batch_update(self, did, requests, required_revision_id):
         if self.fail_next:
@@ -273,9 +316,10 @@ class FakeDocsClient:
         for r in requests:
             if "deleteContentRange" in r:
                 rg = r["deleteContentRange"]["range"]
-                text = text[: rg["startIndex"] - 1] + text[rg["endIndex"] - 1:]
+                a, b = self._py(text, rg["startIndex"]), self._py(text, rg["endIndex"])
+                text = text[:a] + text[b:]
             elif "insertText" in r:
-                i = r["insertText"]["location"]["index"] - 1
+                i = self._py(text, r["insertText"]["location"]["index"])
                 text = text[:i] + r["insertText"]["text"] + text[i:]
         d["text"] = text
         d["rev"] += 1

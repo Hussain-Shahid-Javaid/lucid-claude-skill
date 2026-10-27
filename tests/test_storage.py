@@ -168,3 +168,51 @@ def test_gdocs_partitioning(L):
         L.memory.add(f"Preference number {i}", kind="preference", scope=P)
     be.write_memories(L.memory.list(P), "op-p")
     assert len(be.doc_ids) == 3 and len(be.read_all()) == 5
+
+
+def test_review_regressions_storage(L, s3, tmp_path, clock):
+    import json as _j
+    from lucid.core import Lucid
+    from lucid.storage.base import PermanentError
+    from lucid.storage.gdocs import find_section
+    b = S3Backend("lucid-test", "t9/", s3)
+    dest = S3Destination(b)
+    old = L.memory.add("old fact", kind="fact", scope=P)
+    mirror = Mirror(L, dest, {"fact"}, P)
+    mirror.sync()
+    new = L.memory.supersede(old["id"], "new fact", reason="update")
+    mirror.sync()
+    fresh = Lucid(str(tmp_path / "r.db"), clock)
+    rebuild_from_s3(fresh, b)
+    assert [m["content"] for m in fresh.memory.list(P)] == ["new fact"]  # superseded stays superseded
+    gone = L.memory.add("delete me please", kind="fact", scope=P)
+    mirror.sync()
+    L.memory.delete(gone["id"])
+    mirror.sync()
+    blobs = []
+    for v in s3.list_object_versions(Bucket="lucid-test", Prefix="t9/events/").get("Versions", []):
+        blobs.append(s3.get_object(Bucket="lucid-test", Key=v["Key"], VersionId=v["VersionId"])["Body"].read().decode())
+    assert not any("delete me please" in x for x in blobs)
+    with pytest.raises(PermanentError):
+        S3Backend("no-such-bucket-xyz", "p/", s3).get_record("memory", "x")
+    # Docs indices are UTF-16 and come from the API's element indices (emoji + table before the section)
+    doc = {"body": {"content": [
+        {"startIndex": 1, "endIndex": 10, "paragraph": {"elements": [
+            {"startIndex": 1, "endIndex": 10, "textRun": {"content": "Notes 😀\n"}}]}},
+        {"startIndex": 10, "endIndex": 20, "table": {"tableRows": [{"tableCells": [{"content": [
+            {"startIndex": 12, "endIndex": 17, "paragraph": {"elements": [
+                {"startIndex": 12, "endIndex": 17, "textRun": {"content": "cell\n"}}]}}]}]}]}},
+        {"startIndex": 20, "endIndex": 60, "paragraph": {"elements": [
+            {"startIndex": 20, "endIndex": 60, "textRun": {"content": "⟦lucid:begin v1⟧\n⟦lucid:end op=o1⟧\n"}}]}}]}}
+    start, end, inner, op = find_section(doc)
+    assert start == 20 and op == "o1"
+    fake = FakeDocsClient()
+    did = fake.create("emoji")
+    fake.user_edit(did, lambda t: "Notes 😀 and 𝄞 music\n" + t)
+    be = GoogleDocsBackend(fake, [did])
+    L.memory.add("Prefers emoji-safe docs", kind="preference", scope=P)
+    be.write_memories(L.memory.list(P, kind="preference"), "op-e1")
+    be.write_memories(L.memory.list(P, kind="preference"), "op-e2")
+    assert fake.docs[did]["text"].startswith("Notes 😀 and 𝄞 music\n")
+    assert find_section(fake.get(did))[3] == "op-e2"
+    _ = _j

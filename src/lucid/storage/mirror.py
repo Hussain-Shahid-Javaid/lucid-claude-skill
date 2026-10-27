@@ -39,13 +39,16 @@ class S3Destination:
         if payload["action"] == "upsert":
             rec = payload["record"]
             cur = self.b.get_record("memory", rec["id"])
-            if cur and cur.body.get("revision", 0) > rec.get("revision", 0):
+            if cur and cur.body.get("status") == rec.get("status") and cur.body.get("revision", 0) > rec.get("revision", 0):
                 raise ConflictError(f"remote has newer revision of {rec['id']}")
             etag = self.b.put_record("memory", rec["id"], rec, expected_version=cur.version if cur else None,
                                      create_only=cur is None)
             return {"event": ev, "etag": etag}
         if payload["action"] == "delete":
-            return {"event": ev, **self.b.delete_record("memory", payload["id"], payload.get("reason", ""))}
+            res = self.b.delete_record("memory", payload["id"], payload.get("reason", ""))
+            # Upsert events carry the deleted content: remove them (all versions), keep this delete event.
+            res["events_removed"] = self.b.delete_events(f"mem:{payload['id']}:", keep=op_id)
+            return {"event": ev, **res}
         raise ValueError(payload["action"])
 
     def lookup(self, op_id: str) -> dict | None:
@@ -68,9 +71,9 @@ class Mirror:
         for r in rows:
             if r["kind"] not in self.categories:
                 continue
-            if r["status"] == "active":
+            if r["status"] in ("active", "superseded"):
                 m = self.L.memory.get(r["id"])
-                op = f"mem:{r['id']}:r{r['revision']}:{r['content_hash'][:12]}"
+                op = f"mem:{r['id']}:r{r['revision']}:{r['status']}:{r['content_hash'][:12]}"
                 self.L.outbox.enqueue(op, self.dest.name, {"action": "upsert", "record": memory_record(m)})
             elif r["status"] in ("deleted", "invalidated"):
                 op = f"mem:{r['id']}:delete"
@@ -138,8 +141,10 @@ class DocsMirror:
     def reconcile(self, doc_id: str, remote: dict[str, str]) -> None:
         for mid, text in remote.items():
             try:
-                m = self.L.memory.get(mid)
+                m = self.L.memory.get(mid, scope=self.scope)  # a doc line cannot touch other scopes
             except Exception:
+                continue
+            if m["kind"] not in self.categories:
                 continue
             if m["status"] == "active" and text.strip() != m["content"].replace("\n", " ").strip():
                 new = self.L.memory.supersede(mid, text.strip(), reason=f"edited by user in Google Doc {doc_id}",

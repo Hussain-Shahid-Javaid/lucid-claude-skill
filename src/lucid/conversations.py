@@ -88,15 +88,15 @@ class Archive:
                  "echo_messages": 0, "skipped": None}
         if conv.provider == "" or conv.external_id == "":
             raise ImportErrorBadInput("conversation needs provider and external_id")
-        nat = f"conv:{conv.provider}|{conv.account}|{conv.external_id}"
+        nat = f"conv:{scope_user}|{conv.provider}|{conv.account}|{conv.external_id}"
         with self.s.tx() as c:
             if c.execute("SELECT 1 FROM tombstones WHERE natural_key=?", (nat,)).fetchone():
                 stats["skipped"] = "tombstoned"
                 if import_id is not None and index is not None:
                     c.execute("UPDATE imports SET checkpoint=? WHERE id=?", (index, import_id))
                 return stats
-            row = c.execute("SELECT id FROM conversations WHERE provider=? AND account=? AND external_id=?",
-                            (conv.provider, conv.account, conv.external_id)).fetchone()
+            row = c.execute("SELECT id FROM conversations WHERE user_scope=? AND provider=? AND account=? AND"
+                            " external_id=?", (scope_user, conv.provider, conv.account, conv.external_id)).fetchone()
             if row:
                 cid = row[0]
                 c.execute("UPDATE conversations SET title=COALESCE(?, title), updated_at=COALESCE(?, updated_at),"
@@ -256,7 +256,7 @@ class Archive:
         conv = self.s.one("SELECT * FROM conversations WHERE id=?", (cid,))
         if not conv:
             raise KeyError(cid)
-        nat = f"conv:{conv['provider']}|{conv['account']}|{conv['external_id']}"
+        nat = f"conv:{conv['user_scope']}|{conv['provider']}|{conv['account']}|{conv['external_id']}"
         now = self.s.clock.iso()
         with self.s.tx() as c:
             msg_ids = [r[0] for r in c.execute("SELECT id FROM messages WHERE conversation_id=?", (cid,))]
@@ -274,8 +274,9 @@ class Archive:
                         f"SELECT COUNT(*) FROM memory_evidence WHERE memory_id=? AND (message_id='' OR message_id"
                         f" NOT IN ({qs}))", [mid, *msg_ids]).fetchone()[0]
                     if not others:
-                        c.execute("UPDATE memories SET status='invalidated', updated_at=? WHERE id=? AND"
-                                  " status='active'", (now, mid))
+                        # Derived from deleted content: invalidate AND clear the text.
+                        c.execute("UPDATE memories SET status='invalidated', content='', rationale=NULL,"
+                                  " updated_at=? WHERE id=? AND status IN ('active','superseded')", (now, mid))
                         c.execute("DELETE FROM memories_fts WHERE memory_id=?", (mid,))
                         invalidated.append(mid)
                     c.execute(f"DELETE FROM memory_evidence WHERE memory_id=? AND message_id IN ({qs})",

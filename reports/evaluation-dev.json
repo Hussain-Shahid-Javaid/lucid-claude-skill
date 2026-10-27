@@ -1,6 +1,6 @@
 {
   "split": "dev",
-  "generated_at": "2026-10-27T18:59:09.998388Z",
+  "generated_at": "2026-10-27T19:13:03.707331Z",
   "python": "3.13.18",
   "preregistration_note": "Primary metrics, splits and conditions fixed before the held-out run. The 'lucid_hybrid' condition and the paraphrase query style were added after inspecting the development split (seed 1); that exposure is disclosed in the report.",
   "memory_suite": {
@@ -59,7 +59,7 @@
         0.0,
         0.0
       ],
-      "wall_s": 2.83
+      "wall_s": 3.59
     },
     "paraphrase": {
       "n": 60,
@@ -116,7 +116,7 @@
         0.0,
         0.05
       ],
-      "wall_s": 2.75
+      "wall_s": 3.69
     }
   },
   "correction_suite": {
@@ -176,7 +176,7 @@
   },
   "experiments": [
     {
-      "id": "exp_0687922ebf4e49299858",
+      "id": "exp_c2a97c78799047f9879e",
       "module": "discovery",
       "title": "Recurrence for binary strings without '111'",
       "hypothesis": "The count obeys a low-order integer linear recurrence",
@@ -224,11 +224,11 @@
       "criticism": "Finite agreement is not a proof. A combinatorial proof exists in the literature (transfer-matrix / last-run argument) but was not machine-checked here. Simplicity ordering is a bias, not evidence.",
       "revision_of": null,
       "cost": {},
-      "created_at": "2026-10-27T18:59:15.674895Z",
-      "updated_at": "2026-10-27T18:59:18.460703Z"
+      "created_at": "2026-10-27T19:13:11.091808Z",
+      "updated_at": "2026-10-27T19:13:13.843092Z"
     },
     {
-      "id": "exp_d9395a38a81444449244",
+      "id": "exp_50dfe57e016945f39638",
       "module": "discovery",
       "title": "Euler polynomial primality (falsification control)",
       "hypothesis": "n^2+n+41 is prime for all n \u2265 0",
@@ -249,11 +249,11 @@
       "criticism": "A single checkable counterexample refutes the claim.",
       "revision_of": null,
       "cost": {},
-      "created_at": "2026-10-27T18:59:18.462694Z",
-      "updated_at": "2026-10-27T18:59:18.463427Z"
+      "created_at": "2026-10-27T19:13:13.845586Z",
+      "updated_at": "2026-10-27T19:13:13.846257Z"
     },
     {
-      "id": "exp_b79282838a2f456f8e2b",
+      "id": "exp_060335e5e4a54878a583",
       "module": "consciousness",
       "title": "GW-1: global availability ablation (functional analogue)",
       "hypothesis": "Integration tasks causally depend on broadcast of module contents",
@@ -311,11 +311,11 @@
       "criticism": "The dissociation is close to guaranteed by construction (modules only know their slices), so the experiment mainly validates the ablation/controls methodology. A stronger test needs learned modules whose dependence on broadcast is not designed in, e.g. an open-weight model with real activation access (see ActivationProbe).",
       "revision_of": null,
       "cost": {},
-      "created_at": "2026-10-27T18:59:18.465836Z",
-      "updated_at": "2026-10-27T18:59:19.120360Z"
+      "created_at": "2026-10-27T19:13:13.847658Z",
+      "updated_at": "2026-10-27T19:13:14.531650Z"
     },
     {
-      "id": "exp_cdf50ab1904f4a4fa1fa",
+      "id": "exp_7662fec320a24cb5b715",
       "module": "consciousness",
       "title": "HO-1: monitoring/abstention ablation (functional analogue)",
       "hypothesis": "A monitor estimating reliability from observable evidence improves calibration",
@@ -338,11 +338,11 @@
       "criticism": "Simulated solver with known noise; real effect sizes require live model runs.",
       "revision_of": null,
       "cost": {},
-      "created_at": "2026-10-27T18:59:19.122658Z",
-      "updated_at": "2026-10-27T18:59:19.124574Z"
+      "created_at": "2026-10-27T19:13:14.534068Z",
+      "updated_at": "2026-10-27T19:13:14.535749Z"
     }
   ],
-  "wall_s": 9.13,
+  "wall_s": 10.83,
   "cost": {
     "model_calls": 0,
     "tokens": 0,

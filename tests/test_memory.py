@@ -128,3 +128,24 @@ def test_edit_export_backup_restore_reindex(L, tmp_path):
     assert L.memory.search("concise", P).items == []
     assert L.memory.rebuild_index() >= 1
     assert L.memory.search("concise", P).items
+
+
+def test_review_regressions(L, tmp_path):
+    import os
+    alice, bob = Scope("alice", ""), Scope("bob", "")
+    m = L.memory.add("alice private", scope=alice, op_id="shared-op")
+    other = L.memory.add("bob note", scope=bob, op_id="shared-op")
+    assert other["id"] != m["id"] and other["content"] == "bob note"   # op ids are per user
+    # deleting content also clears correction records that repeat it, including in exports
+    a = L.memory.add("Lives at 12 Elm Street", kind="fact", scope=alice)
+    new = L.memory.correct(a["id"], "Lives at 9 Oak Road", reason="moved")
+    L.memory.delete(new["id"])
+    L.memory.delete(a["id"])
+    assert "12 Elm" not in json.dumps(L.memory.export(alice)) and "9 Oak" not in json.dumps(L.memory.export(alice))
+    # tombstone applies regardless of kind
+    t = L.memory.add("secret plan", kind="note", scope=alice)
+    L.memory.delete(t["id"])
+    with pytest.raises(MemoryError):
+        L.memory.add("secret plan", kind="fact", scope=alice, origin="import")
+    bk = L.store.backup(str(tmp_path / "b.db"))
+    assert oct(os.stat(bk).st_mode & 0o777) == "0o600"

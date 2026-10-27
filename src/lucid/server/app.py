@@ -86,7 +86,10 @@ def _web_dir() -> str | None:
 
 
 def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[str], demo: bool = False,
-               start_timers: bool = True) -> FastAPI:
+               start_timers: bool = True, admin_users: set[str] | None = None) -> FastAPI:
+    """admin_users may see/act on global operational state (activity, sync queues, tasks, budgets,
+    questions, experiments, capture-site settings, backups). Everyone else only sees their own scope."""
+    admins = {"default"} if admin_users is None else set(admin_users)
     import contextlib
 
     L = lucid
@@ -144,6 +147,10 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
     def scope(request: Request, project: str | None = None) -> Scope:
         return Scope(request.state.user, project or "")
 
+    def admin(request: Request) -> None:
+        if request.state.user not in admins:
+            raise HTTPException(403, "admin only: this view covers global operational state")
+
     def ok(data: Any) -> JSONResponse:
         return JSONResponse(json.loads(redact(json.dumps(data, default=str))))
 
@@ -153,7 +160,11 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
     # ------------------------------------------------------------------ status
     @app.get("/api/health")
     def health(request: Request):
+        if request.state.user not in admins:
+            return ok({"user": request.state.user, "demo": demo, "admin": False,
+                       "schema_version": L.store.schema_version()})
         h = L.health()
+        h["admin"] = True
         h["demo"] = demo
         h["user"] = request.state.user
         h["scheduler_running"] = bool(state["scheduler"] and state["scheduler"].is_alive())
@@ -165,7 +176,8 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
         return ok(load_matrix())
 
     @app.get("/api/connectors")
-    def connectors():
+    def connectors(request: Request):
+        admin(request)
         from ..importers import manifests
         sites = [dict(r) for r in L.store.q("SELECT * FROM capture_sites ORDER BY site")]
         storage = [
@@ -178,7 +190,8 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
         return ok({"importers": manifests(), "storage": storage, "capture_sites": sites})
 
     @app.get("/api/activity")
-    def activity(limit: int = 100):
+    def activity(request: Request, limit: int = 100):
+        admin(request)
         return ok([dict(r) for r in L.store.q("SELECT * FROM activity ORDER BY id DESC LIMIT ?", (min(limit, 1000),))])
 
     # ------------------------------------------------------------------ memory
@@ -237,7 +250,11 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
         return ok(out)
 
     @app.post("/api/conflicts/{cid}/resolve")
-    def resolve(cid: str, body: dict = Body(...)):
+    def resolve(request: Request, cid: str, body: dict = Body(...)):
+        conf = L.store.one("SELECT memory_a FROM memory_conflicts WHERE id=?", (cid,))
+        owner = L.store.one("SELECT user_scope FROM memories WHERE id=?", (conf[0],)) if conf else None
+        if not owner or owner[0] != request.state.user:
+            raise HTTPException(404, "not found")
         try:
             return ok(L.memory.resolve_conflict(cid, keep=body.get("keep"), resolution=body.get("resolution", "dashboard"),
                                                 actor="dashboard"))
@@ -268,13 +285,15 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
 
     # ------------------------------------------------------------------ sync / sharing
     @app.get("/api/sync")
-    def sync():
+    def sync(request: Request):
+        admin(request)
         return ok({"destinations": L.outbox.status(), "items": L.outbox.items(limit=200),
                    "imports": [dict(r) for r in L.store.q("SELECT * FROM imports ORDER BY started_at DESC LIMIT 50")]})
 
     @app.get("/api/sharing")
     def sharing(request: Request, project: str = ""):
-        return ok({"rules": L.handoffs.rules(scope(request, project)), "handoffs": L.handoffs.list()})
+        return ok({"rules": L.handoffs.rules(scope(request, project)),
+                   "handoffs": L.handoffs.list(user=request.state.user)})
 
     @app.post("/api/sharing")
     def sharing_add(request: Request, body: dict = Body(...)):
@@ -284,7 +303,10 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
             err(e)
 
     @app.post("/api/sharing/{rid}/disable")
-    def sharing_disable(rid: str):
+    def sharing_disable(request: Request, rid: str):
+        r = L.store.one("SELECT user_scope FROM sharing_rules WHERE id=?", (rid,))
+        if not r or r[0] != request.state.user:
+            raise HTTPException(404, "not found")
         L.handoffs.disable_rule(rid)
         return ok({"disabled": rid})
 
@@ -299,11 +321,13 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
 
     # ------------------------------------------------------------------ tasks / budgets / decisions
     @app.get("/api/tasks")
-    def tasks():
+    def tasks(request: Request):
+        admin(request)
         return ok(L.tasks.list())
 
     @app.get("/api/budgets")
-    def budgets():
+    def budgets(request: Request):
+        admin(request)
         out = []
         for led in L.budget.ledgers():
             led["entries"] = L.budget.entries(led["ledger_id"])
@@ -311,15 +335,18 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
         return ok(out)
 
     @app.get("/api/questions")
-    def questions(status: str = ""):
+    def questions(request: Request, status: str = ""):
+        admin(request)
         return ok({"questions": L.decisions.list(status or None), "authorizations": L.decisions.authorizations()})
 
     @app.post("/api/questions/{qid}/{action}")
-    def question_action(qid: str, action: str, body: dict = Body(default={})):
+    def question_action(request: Request, qid: str, action: str, body: dict = Body(default={})):
+        admin(request)
         d = L.decisions
         try:
             if action == "answer":
-                return ok(d.answer(qid, body["option"], by="dashboard", remember=bool(body.get("remember"))))
+                return ok(d.answer(qid, body["option"], by="dashboard", remember=bool(body.get("remember")),
+                                   mem_scope=scope(request, body.get("project"))))
             if action == "extend":
                 return ok(d.extend(qid, float(body.get("seconds", 120))))
             if action == "accept-default":
@@ -331,18 +358,21 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
         raise HTTPException(404, "unknown action")
 
     @app.get("/api/verifications")
-    def verifications():
+    def verifications(request: Request):
+        admin(request)
         rows = [dict(r) for r in L.store.q("SELECT * FROM verifications ORDER BY created_at DESC LIMIT 200")]
         preds = L.monitor.calibration()
         return ok({"verifications": rows, "calibration": preds, "monitor": L.monitor.items()[-200:]})
 
     @app.get("/api/experiments")
-    def experiments(module: str = ""):
+    def experiments(request: Request, module: str = ""):
+        admin(request)
         return ok(L.experiments.list(module or None))
 
     # ------------------------------------------------------------------ backup / export
     @app.post("/api/backup")
-    def backup():
+    def backup(request: Request):
+        admin(request)
         path = os.path.join(os.path.dirname(L.store.path) or ".", "backups",
                             f"lucid-{L.store.clock.iso().replace(':', '')}.db")
         return ok({"backup": L.store.backup(path)})
@@ -353,11 +383,13 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
 
     # ------------------------------------------------------------------ browser capture
     @app.get("/api/capture/sites")
-    def capture_sites():
+    def capture_sites(request: Request):
+        admin(request)
         return ok([dict(r) for r in L.store.q("SELECT * FROM capture_sites ORDER BY site")])
 
     @app.post("/api/capture/sites")
-    def capture_site_set(body: dict = Body(...)):
+    def capture_site_set(request: Request, body: dict = Body(...)):
+        admin(request)
         site = str(body["site"]).lower().strip()
         L.store.ex("INSERT INTO capture_sites (site, enabled, auto_capture, paused, updated_at) VALUES (?,?,?,?,?)"
                    " ON CONFLICT(site) DO UPDATE SET enabled=excluded.enabled, auto_capture=excluded.auto_capture,"

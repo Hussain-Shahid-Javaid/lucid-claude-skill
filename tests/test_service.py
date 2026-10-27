@@ -74,3 +74,32 @@ def test_questions_endpoint_and_sharing_preview(client, L):
     assert r["status"] == "answered"
     prev = client.post("/api/handoff/preview", json={"destination": "gemini", "goal": "x"}, headers=H).json()
     assert prev["preview"] is True
+
+
+def test_cross_user_isolation_on_every_mutating_path(client, L):
+    from lucid.memory import Scope
+    bob = {"X-Lucid-Token": "bob-token"}
+    a = L.memory.add("alice tabs", kind="preference", key="k", scope=Scope("default", ""))
+    b = L.memory.add("alice spaces", kind="preference", key="k", scope=Scope("default", ""))
+    conf = L.memory.conflicts(Scope("default", ""))[0]
+    r = client.post(f"/api/conflicts/{conf['id']}/resolve", json={"keep": b["id"]}, headers=bob)
+    assert r.status_code == 404 and L.memory.get(a["id"])["status"] == "active"
+    rule = L.handoffs.add_rule("gemini", ["decision"], Scope("default", ""))
+    assert client.post(f"/api/sharing/{rule['id']}/disable", json={}, headers=bob).status_code == 404
+    for path in ("/api/activity", "/api/sync", "/api/tasks", "/api/budgets", "/api/questions", "/api/experiments",
+                 "/api/verifications", "/api/connectors", "/api/capture/sites"):
+        assert client.get(path, headers=bob).status_code == 403, path
+    assert client.post("/api/capture/sites", json={"site": "x.com", "enabled": True}, headers=bob).status_code == 403
+    assert client.get("/api/health", headers=bob).json()["admin"] is False
+
+
+def test_capture_of_same_conversation_by_two_users_stays_separate(client, L):
+    L.store.ex("INSERT INTO capture_sites (site, enabled, updated_at) VALUES ('chat.example.com', 1, 'x')")
+    body = lambda txt: {"url": "https://chat.example.com/c/1", "kind": "conversation", "extraction": {"ok": True},
+                        "conversation": {"provider": "example", "id": "conv1",
+                                         "messages": [{"id": "m1", "role": "user", "content": txt}]}}
+    assert client.post("/api/capture", json=body("alice text"), headers=H).status_code == 200
+    assert client.post("/api/capture", json=body("BOB WAS HERE"), headers={"X-Lucid-Token": "bob-token"}).status_code == 200
+    alice_conv = [c for c in L.archive.list(user="default")][0]
+    msgs = L.archive.get(alice_conv["id"])["messages"]
+    assert [m["content"] for m in msgs] == ["alice text"] and msgs[0]["status"] == "active"

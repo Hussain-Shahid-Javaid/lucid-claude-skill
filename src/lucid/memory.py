@@ -151,13 +151,15 @@ class MemoryStore:
             notes.append("verification downgraded: 'verified' requires independent (non-Lucid) evidence")
 
         chash = sha256(f"{scope.user}|{scope.project}|{kind}|{content}")
-        natural_key = f"memory:{chash}"
+        # Tombstone key ignores kind, so deleted content cannot come back under another kind.
+        natural_key = f"memory:{tombstone_key(scope, content)}"
+        op_key = f"memory.add:{scope.user}:{op_id}" if op_id else None
 
         with self.s.tx() as c:
-            if op_id:
-                prev = c.execute("SELECT result FROM operations WHERE op_id=?", (op_id,)).fetchone()
-                if prev:
-                    return self.get(loads(prev[0])["id"])  # idempotent replay
+            if op_key:
+                prev = c.execute("SELECT result FROM operations WHERE op_id=?", (op_key,)).fetchone()
+                if prev:  # idempotent replay, only ever within the same user
+                    return self.get(loads(prev[0])["id"], scope=Scope(scope.user, scope.project))
             if not allow_resurrect:
                 tomb = c.execute("SELECT 1 FROM tombstones WHERE natural_key=?", (natural_key,)).fetchone()
                 if tomb:
@@ -194,9 +196,9 @@ class MemoryStore:
                 result["notes"] = notes
             if secrets:
                 result.setdefault("notes", []).append(f"redacted secrets: {sorted(set(secrets))}")
-            if op_id:
+            if op_key:
                 c.execute("INSERT INTO operations (op_id, kind, created_at, result) VALUES (?,?,?,?)",
-                          (op_id, "memory.add", now_s, dumps({"id": mid})))
+                          (op_key, "memory.add", now_s, dumps({"id": mid})))
         self.s.log(actor, "memory.add", "memory", mid, {"kind": kind, "origin": origin, "scope": scope.__dict__})
         return result
 
@@ -471,22 +473,23 @@ class MemoryStore:
 
     def delete(self, mid: str, *, reason: str = "user request", actor: str = "user") -> dict:
         m = self.get(mid)
+        now = self.s.clock.iso()
+        scope = Scope(m["user_scope"], m["project_scope"])
         with self.s.tx() as c:
             c.execute("INSERT OR REPLACE INTO tombstones (entity_type, entity_id, natural_key, deleted_at, reason)"
-                      " VALUES ('memory',?,?,?,?)", (mid, f"memory:{m['content_hash']}", self.s.clock.iso(), reason))
+                      " VALUES ('memory',?,?,?,?)",
+                      (mid, f"memory:{tombstone_key(scope, m['content'])}" if m["content"] else None, now, reason))
             c.execute("UPDATE memories SET status='deleted', content='', rationale=NULL, tags='[]', updated_at=?"
-                      " WHERE id=?", (self.s.clock.iso(), mid))
+                      " WHERE id=?", (now, mid))
             c.execute("DELETE FROM memories_fts WHERE memory_id=?", (mid,))
             c.execute("DELETE FROM memory_evidence WHERE memory_id=?", (mid,))
-            # Invalidate derived summaries/corrections that were built from this memory.
+            # Summaries/corrections built from this memory repeat its content: invalidate and clear them.
             derived = [r[0] for r in c.execute(
                 "SELECT memory_id FROM memory_evidence WHERE source_id=? AND relation='derived_from'", (mid,))]
             for d in derived:
-                c.execute("UPDATE memories SET status='invalidated', updated_at=? WHERE id=? AND status='active'",
-                          (self.s.clock.iso(), d))
-                c.execute("DELETE FROM memories_fts WHERE memory_id=?", (d,))
+                _invalidate(c, d, now)
             c.execute("UPDATE memory_conflicts SET status='resolved', resolution='member deleted', resolved_at=?"
-                      " WHERE status='open' AND (memory_a=? OR memory_b=?)", (self.s.clock.iso(), mid, mid))
+                      " WHERE status='open' AND (memory_a=? OR memory_b=?)", (now, mid, mid))
         self.s.log(actor, "memory.delete", "memory", mid, {"reason": reason, "invalidated": derived})
         return {"id": mid, "deleted": True, "invalidated_derived": derived}
 
@@ -505,8 +508,7 @@ class MemoryStore:
                 left = c.execute("SELECT COUNT(*) FROM memory_evidence WHERE memory_id=?", (mid,)).fetchone()[0]
                 m = c.execute("SELECT origin, verification FROM memories WHERE id=?", (mid,)).fetchone()
                 if not left and m and m[0] in ("import", "lucid_summary"):
-                    c.execute("UPDATE memories SET status='invalidated', updated_at=? WHERE id=?", (self.s.clock.iso(), mid))
-                    c.execute("DELETE FROM memories_fts WHERE memory_id=?", (mid,))
+                    _invalidate(c, mid, self.s.clock.iso())
                     invalidated.append(mid)
                 elif not left and m and m[1] == "verified":
                     c.execute("UPDATE memories SET verification='unverified', updated_at=? WHERE id=?",
@@ -567,6 +569,17 @@ class MemoryStore:
                 c.execute("INSERT INTO memories_fts (memory_id, content, tags, kind) VALUES (?,?,?,?)",
                           (r[0], r[1], " ".join(loads(r[2], [])), r[3]))
         return len(rows)
+
+
+def tombstone_key(scope: Scope, content: str) -> str:
+    return sha256(f"{scope.user}|{scope.project}|{content.strip()}")
+
+
+def _invalidate(c, mid: str, now: str) -> None:
+    """Invalidate a derived memory and clear its text (it may repeat deleted content)."""
+    c.execute("UPDATE memories SET status='invalidated', content='', rationale=NULL, tags='[]', updated_at=?"
+              " WHERE id=? AND status IN ('active','superseded')", (now, mid))
+    c.execute("DELETE FROM memories_fts WHERE memory_id=?", (mid,))
 
 
 def render_memory(m: dict) -> str:

@@ -90,9 +90,11 @@ class S3Backend:
     def _get(self, key: str) -> Versioned | None:
         try:
             r = self._wrap(self.c.get_object, Bucket=self.bucket, Key=key)
+        except PermanentError:
+            raise  # e.g. NoSuchBucket / AccessDenied must not look like "record absent"
         except Exception as e:
             code, status = _code(e.__cause__ or e)
-            if code in ("NoSuchKey", "404") or status == 404:
+            if code in ("NoSuchKey", "404") or (status == 404 and code in ("", "NotFound")):
                 return None
             raise
         return Versioned(json.loads(r["Body"].read()), r["ETag"])
@@ -155,6 +157,22 @@ class S3Backend:
         r = self._wrap(self.c.delete_object, Bucket=self.bucket, Key=key)
         return {"key": key, "delete_marker": bool(r.get("DeleteMarker")),
                 "note": "prior object versions remain in a versioned bucket until purge_versions is run"}
+
+    def delete_events(self, op_prefix: str, *, keep: str | None = None, purge: bool = True) -> list[str]:
+        """Delete event objects whose op id starts with `op_prefix` (they contain record content).
+        With purge=True all versions are removed, not just hidden behind delete markers."""
+        pfx = self._key("events") + "/" + op_prefix
+        removed = []
+        r = self._wrap(self.c.list_object_versions, Bucket=self.bucket, Prefix=pfx)
+        for v in r.get("Versions", []) + r.get("DeleteMarkers", []):
+            if keep and v["Key"].endswith(f"/{keep}.json"):
+                continue
+            if purge:
+                self._wrap(self.c.delete_object, Bucket=self.bucket, Key=v["Key"], VersionId=v["VersionId"])
+            else:
+                self._wrap(self.c.delete_object, Bucket=self.bucket, Key=v["Key"])
+            removed.append(v["Key"])
+        return sorted(set(removed))
 
     def purge_versions(self, rtype: str, rid: str) -> dict:
         key = self._key("records", rtype, f"{rid}.json")

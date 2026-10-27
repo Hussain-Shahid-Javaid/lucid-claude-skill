@@ -193,3 +193,47 @@ def test_external_action_authorization_needs_scope(L):
         L.decisions.authorize_action("post_slack", scope="*", limits={"max_count": 1})
     a = L.decisions.authorize_action("post_slack", scope="channel:#builds", limits={"max_count": 3})
     assert a["category"] == "action:post_slack"
+
+
+def test_review_regressions_decisions_and_budget(L, clock):
+    # memory op ids cannot collide with action keys
+    L.decisions.authorize("ordering")
+    ran = []
+    L.decisions.on_default["ordering"] = lambda q: ran.append(1) or "ok"
+    q = L.decisions.ask("x?", ["a", "b"], category="ordering", default="a", timeout_s=1)
+    L.memory.add("collide", op_id=f"default:{q['id']}")
+    clock.advance(2)
+    L.decisions.tick()
+    assert ran == [1]
+    # blocked questions can still be answered
+    qb = L.decisions.ask("Spend?", ["yes", "no"], category="spending", timeout_s=1)
+    clock.advance(2)
+    L.decisions.tick()
+    r = L.decisions.answer(qb["id"], "no")
+    assert r["status"] == "answered" and r["late"] is False
+    # scope without '*' is exact
+    L.decisions.authorize("file_organization", scope="repo/a")
+    assert L.decisions.find_authorization("file_organization", "repo/abc-secret") is None
+    assert L.decisions.find_authorization("file_organization", "repo/a")
+    # failed default actions are retried on a later tick; replay returns the original result
+    calls = []
+
+    def flaky(q):
+        calls.append(1)
+        if len(calls) == 1:
+            raise RuntimeError("network")
+        return "applied"
+    L.decisions.authorize("presentation")
+    L.decisions.on_default["presentation"] = flaky
+    qf = L.decisions.ask("Theme?", ["light", "dark"], category="presentation", default="light", timeout_s=1)
+    clock.advance(2)
+    L.decisions.tick()
+    L.decisions.tick()
+    assert len(calls) == 2 and L.decisions.actions.state(f"default:{qf['id']}")["state"] == "done"
+    assert L.decisions.actions.run_once(f"default:{qf['id']}", lambda: "again") == (False, "applied")
+    # cost limit holds after an overrun even without per-call estimates
+    lid = L.budget.create("c", cost_limit=1.0)
+    r1 = L.budget.reserve(lid, purpose="x", input_tokens=1, max_output_tokens=1, est_cost=0.5)
+    L.budget.reconcile(r1, Usage(input_tokens=1, output_tokens=1, cost=5.0))
+    with pytest.raises(InsufficientBudget):
+        L.budget.reserve(lid, purpose="y", input_tokens=1, max_output_tokens=1)

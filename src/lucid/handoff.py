@@ -153,6 +153,10 @@ class Handoffs:
             self.s.log(consumer, "handoff.consume", "handoff", hid, {})
         return loads(r["payload"], {})
 
-    def list(self, limit: int = 50) -> list[dict]:
-        return [{k: r[k] for k in ("id", "destination", "created_at", "consumed_at", "consumed_by")}
-                for r in self.s.q("SELECT * FROM handoffs ORDER BY created_at DESC LIMIT ?", (limit,))]
+    def list(self, limit: int = 50, user: str | None = None) -> list[dict]:
+        out = []
+        for r in self.s.q("SELECT * FROM handoffs ORDER BY created_at DESC LIMIT ?", (limit * 10 if user else limit,)):
+            if user is not None and (loads(r["payload"], {}).get("scope") or {}).get("user") != user:
+                continue
+            out.append({k: r[k] for k in ("id", "destination", "created_at", "consumed_at", "consumed_by")})
+        return out[:limit]

@@ -9,7 +9,7 @@
   rejected.
 * Pause/cancel propagate to pending tasks, running workers (cooperative token) and
   open questions.
-* External side effects go through ActionLedger (exactly once), so parallelism
+* External side effects go through ActionLedger (at most once per key), so parallelism
   cannot duplicate them.
 
 Runners:
@@ -67,10 +67,30 @@ class Canceled(Exception):
     pass
 
 
+class TaskToken:
+    """Per-task token: honours the coordinator's pause/cancel and its own cancel (e.g. on timeout)."""
+
+    def __init__(self, parent: CancelToken):
+        self.parent = parent
+        self._own = threading.Event()
+
+    def cancel(self):
+        self._own.set()
+
+    @property
+    def canceled(self) -> bool:
+        return self._own.is_set() or self.parent.canceled
+
+    def checkpoint(self, timeout: float | None = None) -> None:
+        self.parent._pause.wait(timeout)
+        if self.canceled:
+            raise Canceled()
+
+
 @dataclass
 class WorkerContext:
     task: dict
-    token: CancelToken
+    token: "CancelToken | TaskToken"
     actions: ActionLedger
     dependency_results: dict[str, Any]
 
@@ -222,14 +242,20 @@ class Coordinator:
     def run(self, task_ids: list[str], runner: Runner | dict[str, Runner], *, ledger_id: str | None = None,
             verify: Callable[[dict[str, Any]], tuple[bool, str]] | None = None) -> dict:
         """Run tasks respecting dependencies, ownership, budget and concurrency."""
+        import time as _time
         runners = runner if isinstance(runner, dict) else {}
         default_runner = None if isinstance(runner, dict) else runner
         pending = set(task_ids)
         running: dict[cf.Future, dict] = {}
+        zombies: dict[cf.Future, dict] = {}   # timed out but thread still alive: paths stay reserved
         results: dict[str, Any] = {}
         retries: dict[str, int] = {}
-        with cf.ThreadPoolExecutor(max_workers=self.concurrency, thread_name_prefix="lucid-worker") as pool:
+        pool = cf.ThreadPoolExecutor(max_workers=self.concurrency, thread_name_prefix="lucid-worker")
+        try:
             while pending or running:
+                for fut in [f for f in zombies if f.done()]:
+                    info = zombies.pop(fut)
+                    self._event("zombie_exited", task_id=info["task"]["id"])
                 if self.token.canceled:
                     for tid in list(pending):
                         self.tasks.set_status(tid, "canceled")
@@ -238,7 +264,7 @@ class Coordinator:
                     pending.clear()
                 dispatched = False
                 for tid in sorted(pending):
-                    if len(running) >= self.concurrency:
+                    if len(running) + len(zombies) >= self.concurrency:
                         break
                     t = self.tasks.get(tid)
                     deps = [self.tasks.get(d) for d in t["depends_on"]]
@@ -249,9 +275,9 @@ class Coordinator:
                         continue
                     if any(d["status"] != "completed" for d in deps):
                         continue
-                    busy = [p for rt in running.values() for p in rt["task"]["owned_paths"]]
+                    busy = [p for rt in list(running.values()) + list(zombies.values()) for p in rt["task"]["owned_paths"]]
                     if t["owned_paths"] and busy and paths_overlap(t["owned_paths"], busy):
-                        continue  # serialize: wait for the owner to finish
+                        continue  # serialize: wait for the owner (or a timed-out zombie) to finish
                     r = runners.get(tid, default_runner)
                     if r is None:
                         raise ValueError(f"no runner for {tid}")
@@ -268,28 +294,40 @@ class Coordinator:
                             self._event("budget_exhausted", task_id=tid, reason=str(e))
                             continue
                     self.tasks.set_status(tid, "running")
-                    ctx = WorkerContext(task=t, token=self.token, actions=self.actions,
+                    tok = TaskToken(self.token)
+                    ctx = WorkerContext(task=t, token=tok, actions=self.actions,
                                         dependency_results={d["id"]: results.get(d["id"]) for d in deps})
                     fut = pool.submit(r.run, ctx)
-                    running[fut] = {"task": t, "reservation": res_id}
+                    running[fut] = {"task": t, "reservation": res_id, "token": tok, "started": _time.monotonic()}
                     pending.discard(tid)
                     dispatched = True
                     self._event("dispatch", task_id=tid, title=t["title"])
                 if not running:
+                    if zombies and pending:
+                        cf.wait(list(zombies), timeout=1.0, return_when=cf.FIRST_COMPLETED)
+                        continue
                     if pending and not dispatched:
                         for tid in pending:  # unsatisfiable (cycle or missing deps)
                             self.tasks.set_status(tid, "blocked", result={"reason": "unsatisfiable dependencies"})
                         pending.clear()
                     continue
-                done, _ = cf.wait(list(running), timeout=self.worker_timeout_s, return_when=cf.FIRST_COMPLETED)
-                if not done:
-                    for fut, info in list(running.items()):
-                        if info["reservation"]:
-                            self.budget.mark_unknown(info["reservation"])
-                        self.tasks.set_status(info["task"]["id"], "failed", result={"reason": "worker timeout"})
-                        running.pop(fut)
-                    continue
+                now = _time.monotonic()
+                wait_s = max(0.01, min(self.worker_timeout_s - (now - i["started"]) for i in running.values()))
+                done, _ = cf.wait(list(running), timeout=wait_s, return_when=cf.FIRST_COMPLETED)
+                now = _time.monotonic()
+                for fut, info in list(running.items()):
+                    if fut in done or now - info["started"] < self.worker_timeout_s:
+                        continue
+                    # Per-task timeout: signal the worker, keep its paths reserved until its thread exits.
+                    info["token"].cancel()
+                    if info["reservation"]:
+                        self.budget.mark_unknown(info["reservation"])
+                    self.tasks.set_status(info["task"]["id"], "failed", result={"reason": "worker timeout"})
+                    self._event("timeout", task_id=info["task"]["id"])
+                    zombies[fut] = running.pop(fut)
                 for fut in done:
+                    if fut not in running:
+                        continue
                     info = running.pop(fut)
                     t = info["task"]
                     tid = t["id"]
@@ -329,6 +367,9 @@ class Coordinator:
                     results[tid] = wr.output
                     report = self.tasks.finish(tid)
                     self._event("finished", task_id=tid, status=report["status"])
+        finally:
+            # Python threads cannot be killed: wait for timed-out workers so nothing runs after we return.
+            pool.shutdown(wait=True)
         final = {"results": results, "statuses": {tid: self.tasks.get(tid)["status"] for tid in task_ids}}
         if verify and not self.token.canceled:
             res_id = None

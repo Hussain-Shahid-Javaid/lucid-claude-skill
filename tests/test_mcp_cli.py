@@ -97,7 +97,7 @@ def test_cli_memory_lifecycle_across_processes(tmp_path):
     _cli(tmp_path, "memory", "delete", new["id"])
     assert _cli(tmp_path, "memory", "search", "bun")["items"] == []
     st = _cli(tmp_path, "status")
-    assert st["schema_version"] == 1 and st["integrity"] == "ok"
+    assert st["schema_version"] == 2 and st["integrity"] == "ok"
     fx = os.path.join(os.path.dirname(__file__), "fixtures", "chatgpt_conversations.synthetic.json")
     imp = _cli(tmp_path, "import", "chatgpt", fx)
     assert imp["conversations"] == 1 and imp["schema_status"] == "community-documented"

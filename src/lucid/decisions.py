@@ -38,27 +38,50 @@ class DecisionError(ValueError):
 
 
 class ActionLedger:
-    """Exactly-once execution of side effects keyed by an idempotency key."""
+    """At-most-once execution of side effects keyed by an idempotency key, with explicit recovery.
+
+    * A key is claimed in the same transaction that checks it, so concurrent callers cannot both run it.
+    * If the action raises, the claim becomes 'failed' and a later call may retry it.
+    * If the process dies mid-action, the claim stays 'claimed': the outcome is unknown, so it is NOT
+      re-run automatically; `unresolved()` lists such keys for review.
+    Keys live in their own namespace ("action:") so they cannot collide with memory op ids.
+    """
 
     def __init__(self, store: Store):
         self.s = store
 
+    @staticmethod
+    def _k(key: str) -> str:
+        return f"action:{key}"
+
+    def state(self, key: str) -> dict | None:
+        r = self.s.one("SELECT result FROM operations WHERE op_id=?", (self._k(key),))
+        return loads(r[0]) if r else None
+
     def run_once(self, key: str, fn: Callable[[], Any]) -> tuple[bool, Any]:
+        """Returns (ran_now, result). On replay of a completed action returns (False, original result)."""
+        k = self._k(key)
         with self.s.tx() as c:
-            r = c.execute("SELECT result FROM operations WHERE op_id=?", (key,)).fetchone()
-            if r:
-                return False, loads(r[0])
-            # Claim first (in the same transaction as the check) so concurrent callers cannot both run it.
-            c.execute("INSERT INTO operations (op_id, kind, created_at, result) VALUES (?,?,?,?)",
-                      (key, "action", self.s.clock.iso(), dumps({"state": "claimed"})))
+            r = c.execute("SELECT result FROM operations WHERE op_id=?", (k,)).fetchone()
+            st = loads(r[0]) if r else None
+            if st and st.get("state") == "done":
+                return False, st.get("result")
+            if st and st.get("state") == "claimed":
+                return False, {"state": "claimed", "note": "outcome unknown (previous run did not finish)"}
+            c.execute("INSERT OR REPLACE INTO operations (op_id, kind, created_at, result) VALUES (?,?,?,?)",
+                      (k, "action", self.s.clock.iso(), dumps({"state": "claimed"})))
         try:
             result = fn()
         except Exception as e:
             self.s.ex("UPDATE operations SET result=? WHERE op_id=?",
-                      (dumps({"state": "failed", "error": str(e)}), key))
+                      (dumps({"state": "failed", "error": str(e)}), k))
             raise
-        self.s.ex("UPDATE operations SET result=? WHERE op_id=?", (dumps({"state": "done", "result": result}), key))
+        self.s.ex("UPDATE operations SET result=? WHERE op_id=?", (dumps({"state": "done", "result": result}), k))
         return True, result
+
+    def unresolved(self) -> list[str]:
+        return [r[0][len("action:"):] for r in self.s.q(
+            "SELECT op_id, result FROM operations WHERE kind='action'") if loads(r[1], {}).get("state") == "claimed"]
 
 
 class Decisions:
@@ -104,7 +127,8 @@ class Decisions:
         now = self.s.clock.iso()
         for r in self.s.q("SELECT * FROM authorizations WHERE category=? AND revoked=0 AND (expires_at IS NULL OR"
                           " expires_at>?)", (category, now)):
-            if r["scope"] == "*" or (scope and (scope == r["scope"] or scope.startswith(r["scope"].rstrip("*")))):
+            pat = r["scope"]
+            if pat == "*" or (scope and (scope == pat or (pat.endswith("*") and scope.startswith(pat[:-1])))):
                 return {**dict(r), "limits": loads(r["limits"], {})}
         return None
 
@@ -184,7 +208,9 @@ class Decisions:
         q = self.get(qid)
         if option not in q["options"]:
             raise DecisionError(f"{option!r} is not an option: {q['options']}")
-        if self._transition(qid, "answered", option, by) or self._transition(qid, "answered", option, by, "paused"):
+        # open/paused answer normally; a 'blocked' question (no authorization, or approval required)
+        # was never applied, so the user's answer resolves it.
+        if any(self._transition(qid, "answered", option, by, frm) for frm in ("open", "paused", "blocked")):
             if remember and self.mem:
                 self.mem.add(f"For '{q['decision']}' choose: {option}", kind="preference", origin="user",
                              scope=mem_scope, key=pref_key or f"decision:{q['category']}:{q['decision']}",
@@ -243,6 +269,19 @@ class Decisions:
         """Resolve every expired open question. Safe to call repeatedly and after restarts."""
         now = self.s.clock.iso()
         out = []
+        # Recovery: defaulted questions whose side effect never started (crash between the
+        # status transition and the claim) are completed now. Claimed-but-unfinished ones are
+        # outcome-unknown and are left for review (ActionLedger.unresolved()).
+        for r in self.s.q("SELECT id, category FROM questions WHERE status='defaulted'"):
+            hook = self.on_default.get(r["category"])
+            st = self.actions.state(f"default:{r['id']}")
+            if hook and (st is None or st.get("state") == "failed"):
+                q = self.get(r["id"])
+                try:
+                    _, effect = self.actions.run_once(f"default:{q['id']}", lambda q=q: hook(q))
+                    out.append({"id": q["id"], "status": "defaulted", "recovered": True, "effect": effect})
+                except Exception as e:  # stays failed; visible in activity
+                    self.s.log("lucid", "question.default_failed", "question", q["id"], {"error": str(e)})
         for r in self.s.q("SELECT id FROM questions WHERE status='open' AND deadline<=?", (now,)):
             q = self.get(r[0])
             auth = None
@@ -254,7 +293,11 @@ class Decisions:
                     hook = self.on_default.get(q["category"])
                     effect = None
                     if hook:
-                        _, effect = self.actions.run_once(f"default:{q['id']}", lambda q=q: hook(q))
+                        try:
+                            _, effect = self.actions.run_once(f"default:{q['id']}", lambda q=q: hook(q))
+                        except Exception as e:  # retried on a later tick
+                            effect = {"error": str(e)}
+                            self.s.log("lucid", "question.default_failed", "question", q["id"], {"error": str(e)})
                     self.s.log("lucid", "question.default", "question", q["id"],
                                {"applied": q["default_option"], "authorization": auth["id"]})
                     out.append({"id": q["id"], "status": "defaulted", "applied": q["default_option"], "effect": effect})

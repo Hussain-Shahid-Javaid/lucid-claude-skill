@@ -122,8 +122,12 @@ class BudgetLedger:
                 if need > avail:
                     raise InsufficientBudget(f"{purpose}: needs {need} tokens, {avail} available"
                                              f"{' (incl. reserve)' if use_reserve else ' (reserve held back)'}", t)
-            if t["cost_limit"] is not None and est_cost and t["cost_used"] + t["cost_held"] + est_cost > t["cost_limit"]:
-                raise InsufficientBudget(f"{purpose}: estimated cost exceeds remaining cost budget", t)
+            if t["cost_limit"] is not None:
+                if t["mode"] == "hard" and not est_cost:
+                    raise InsufficientBudget(f"{purpose}: a hard cost limit needs a cost estimate per call", t)
+                if t["cost_used"] + t["cost_held"] + est_cost > t["cost_limit"] or \
+                        t["cost_used"] + t["cost_held"] >= t["cost_limit"]:
+                    raise InsufficientBudget(f"{purpose}: cost budget exhausted or would be exceeded", t)
             eid = new_id("res")
             now = self.s.clock.iso()
             c.execute("INSERT INTO budget_entries (id, ledger_id, purpose, actor, status, reserved_tokens, reserved_cost,"

@@ -421,7 +421,8 @@ class MemoryStore:
         scope = Scope(old["user_scope"], old["project_scope"])
         self.add(f"Correction: {old['content']!r} was replaced by {content!r}. Reason: {reason}",
                  kind="correction", origin="user" if actor == "user" else "assistant", scope=scope,
-                 tags=["correction"], evidence=[Evidence(source_id=mid, relation="derived_from")], actor=actor)
+                 tags=["correction"], evidence=[Evidence(source_id=mid, relation="derived_from"),
+                                                  Evidence(source_id=new["id"], relation="derived_from")], actor=actor)
         return new
 
     def resolve_conflict(self, conflict_id: str, *, keep: str | None = None, resolution: str,

@@ -67,6 +67,7 @@ class CorrectionCycle:
         init_ok = oracle(draft) if oracle else None
         stop = "all checks passed"
         seen_failures: set[frozenset] = set()
+        last_rejection = ""
         it = 0
         while not all(v[0] for v in results.values()):
             failing = frozenset(k for k, v in results.items() if not v[0])
@@ -78,6 +79,8 @@ class CorrectionCycle:
                 break
             if failing in seen_failures and it > 0:
                 stop = "no new evidence: same failures after revision"
+                if last_rejection:
+                    stop = f"{last_rejection}; {stop}"
                 break
             seen_failures.add(failing)
             if revise is None:
@@ -96,7 +99,7 @@ class CorrectionCycle:
             if accepted:
                 current, results = candidate, cand_results
             elif broke:
-                stop = f"revision rejected: it broke passing checks {broke}"
+                last_rejection = stop = f"revision rejected: it broke passing checks {broke}"
                 if it >= self.max_iterations:
                     break
         else:

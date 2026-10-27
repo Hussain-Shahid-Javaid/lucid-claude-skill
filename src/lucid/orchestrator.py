@@ -202,8 +202,11 @@ class Coordinator:
     def cancel(self, root_id: str | None = None) -> None:
         self.token.cancel()
         for t in self.tasks.list():
-            if t["status"] in ("pending", "paused") and (root_id is None or t["parent_id"] == root_id):
-                self.tasks.set_status(t["id"], "canceled")
+            if root_id is not None and t["parent_id"] != root_id and t["id"] != root_id:
+                continue
+            if t["status"] in ("pending", "paused", "running"):
+                if t["status"] != "running":  # running workers stop at their next token checkpoint
+                    self.tasks.set_status(t["id"], "canceled")
                 if self.decisions:
                     self.decisions.cancel_for_task(t["id"])
         self._event("cancel", task_id=root_id)

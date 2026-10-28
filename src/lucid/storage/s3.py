@@ -73,7 +73,7 @@ class S3Backend:
                 raise OutcomeUnknown(f"{name}: request may have been applied") from e
             if code in ("ExpiredToken", "ExpiredTokenException", "InvalidAccessKeyId", "AccessDenied",
                         "NoSuchBucket", "SignatureDoesNotMatch"):
-                raise PermanentError(f"{code}: check AWS credentials/permissions for s3://{self.bucket}/{self.prefix}") from e
+                raise PermanentError(f"{code}: check the AWS credentials and that they can use s3://{self.bucket}/{self.prefix}") from e
             raise
 
     def _key(self, *parts: str) -> str:
@@ -104,7 +104,7 @@ class S3Backend:
         m = self._get(self._key("manifest.json"))
         if m:
             if m.body.get("schema") != SCHEMA:
-                raise PermanentError(f"remote schema {m.body.get('schema')} != {SCHEMA}; run migration")
+                raise PermanentError(f"the bucket uses data format {m.body.get('schema')}, this Lucid uses {SCHEMA}; upgrade first")
             return m
         try:
             etag = self._put(self._key("manifest.json"), {"schema": SCHEMA, "format": "lucid.s3"}, IfNoneMatch="*")
@@ -130,7 +130,7 @@ class S3Backend:
     def put_record(self, rtype: str, rid: str, body: dict, expected_version: str | None = None,
                    create_only: bool = False) -> str:
         if self._get(self._key("tombstones", rtype, f"{rid}.json")):
-            raise ConflictError(f"{rtype}/{rid} is tombstoned; refusing to resurrect")
+            raise ConflictError(f"{rtype}/{rid} was deleted (tombstoned), so it won't be written again")
         cond = {"IfMatch": expected_version} if expected_version else ({"IfNoneMatch": "*"} if create_only else {})
         return self._put(self._key("records", rtype, f"{rid}.json"), body, **cond)
 

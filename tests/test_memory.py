@@ -149,3 +149,10 @@ def test_review_regressions(L, tmp_path):
         L.memory.add("secret plan", kind="fact", scope=alice, origin="import")
     bk = L.store.backup(str(tmp_path / "b.db"))
     assert oct(os.stat(bk).st_mode & 0o777) == "0o600"
+
+
+def test_anthropic_key_is_reported_once():
+    from lucid.redact import find_secrets, redact
+    t = "key sk-ant-api03-EXAMPLEdoNOTuseEXAMPLE0000 and sk-proj-EXAMPLEdoNOTuseEXAMPLE0000"
+    assert sorted(find_secrets(t)) == ["anthropic_key", "openai_key"]
+    assert "EXAMPLE" not in redact(t)

@@ -77,7 +77,7 @@ export function Memory() {
           <button type="submit">Search</button>
         </form>
         <form className="row" onSubmit={(e) => { e.preventDefault(); add(); }}>
-          <input aria-label="New memory" placeholder="Add a memory (stored as origin=user)" value={text} onChange={(e) => setText(e.target.value)} />
+          <input aria-label="New memory" placeholder="Add a memory (saved as something you said)" value={text} onChange={(e) => setText(e.target.value)} />
           <select aria-label="Kind" value={kind} onChange={(e) => setKind(e.target.value)}>
             {["note", "preference", "decision", "fact", "lesson", "project_state", "task_state"].map((k) => <option key={k}>{k}</option>)}
           </select>
@@ -149,7 +149,7 @@ function MemoryDetail({ id, onChange, onClose }: { id: string; onChange: () => v
             <div className="row">
               <input aria-label="Corrected text" placeholder="Corrected text" value={fix} onChange={(e) => setFix(e.target.value)} />
               <button onClick={async () => { if (fix) { await post(`/api/memories/${id}/correct`, { content: fix }); setFix(""); onChange(); onClose(); } }}>Correct</button>
-              <button className="danger" onClick={async () => { if (confirm("Delete this memory? A tombstone is kept so it cannot be re-imported.")) { await del(`/api/memories/${id}`); onChange(); reload(); } }}>Delete</button>
+              <button className="danger" onClick={async () => { if (confirm("Delete this memory? Lucid keeps a note that it was deleted, so a later import can't bring it back.")) { await del(`/api/memories/${id}`); onChange(); reload(); } }}>Delete</button>
             </div>)}
         </div>
       )}</View>
@@ -220,7 +220,7 @@ export function Sync() {
     <Section title="Sync queues">
       <View v={v}>{(d) => (
         <>
-          {Object.keys(d.destinations).length === 0 ? <p className="state empty">No outbound destinations configured (local-only mode).</p> : (
+          {Object.keys(d.destinations).length === 0 ? <p className="state empty">Nothing is sent anywhere. Lucid is running on this computer only.</p> : (
             <table><thead><tr><th>Destination</th><th>Counts</th><th>Oldest pending (lag)</th></tr></thead>
               <tbody>{Object.entries(d.destinations).map(([k, s]: [string, any]) => (
                 <tr key={k}><td>{k}</td><td>{Object.entries(s.counts).map(([st, n]) => <Badge key={st} kind={statusKind(st)}>{st}: {String(n)}</Badge>)}</td>
@@ -405,7 +405,7 @@ export function Connectors() {
           <table><tbody>{d.storage.map((s: Any) => <tr key={s.id}><td>{s.id}</td><td><Badge kind={s.status === "configured" ? "good" : "muted"}>{s.status}</Badge></td><td>{s.note || s.path}</td></tr>)}</tbody></table>)}</View>
       </Section>
       <Section title="Browser capture sites">
-        <p className="muted">Capture is user-selected by default. Automatic capture only for sites you enable here.</p>
+        <p className="muted">You choose what to capture. Lucid captures automatically only on sites you turn on here.</p>
         <View v={v}>{(d) => d.capture_sites.length === 0 ? <p className="state empty">No sites enabled.</p> : (
           <table><thead><tr><th>Site</th><th>Enabled</th><th>Auto capture</th><th>Paused</th></tr></thead>
             <tbody>{d.capture_sites.map((s: Any) => <tr key={s.site}><td>{s.site}</td>
@@ -459,7 +459,7 @@ export function Activity() {
   const [v, reload] = useApi<Any[]>("/api/activity");
   return (
     <Section title="Observed activity" actions={<button className="ghost" onClick={reload}>Refresh</button>}>
-      <p className="muted">Only recorded events — no inferred progress or generated "thoughts".</p>
+      <p className="muted">This shows only what actually happened. Lucid doesn't guess at progress or make up "thoughts".</p>
       <View v={v} empty={(d) => d.length === 0}>{(d) => (
         <table><thead><tr><th>Time</th><th>Actor</th><th>Action</th><th>Entity</th></tr></thead>
           <tbody>{d.map((a: Any) => <tr key={a.id}><td>{fmt(a.ts)}</td><td>{a.actor}</td><td>{a.action}</td><td><code>{a.entity_id}</code></td></tr>)}</tbody></table>)}</View>

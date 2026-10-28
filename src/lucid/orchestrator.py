@@ -139,7 +139,7 @@ class AnthropicRunner:
 
     def __init__(self, model: str, api_key: str | None = None, max_tokens: int = 2048):
         if os.environ.get("LUCID_ENABLE_PAID_CALLS") != "1":
-            raise PermissionError("paid model calls are disabled; set LUCID_ENABLE_PAID_CALLS=1 and configure a budget")
+            raise PermissionError("paid model calls are off. To allow them, set LUCID_ENABLE_PAID_CALLS=1 and give the work a budget")
         self.key = api_key or os.environ.get("ANTHROPIC_API_KEY")
         if not self.key:
             raise PermissionError("no ANTHROPIC_API_KEY configured")
@@ -216,7 +216,7 @@ class Coordinator:
     def spawn(self, parent: dict | None, title: str, **kw) -> dict:
         depth = (parent["depth"] + 1) if parent else 0
         if depth > self.max_depth:
-            raise RuntimeError(f"delegation depth {depth} exceeds limit {self.max_depth}")
+            raise RuntimeError(f"subtasks can only be nested {self.max_depth} levels deep (this would be {depth})")
         return self.tasks.create(title, parent_id=parent["id"] if parent else None, depth=depth, **kw)
 
     def cancel(self, root_id: str | None = None) -> None:

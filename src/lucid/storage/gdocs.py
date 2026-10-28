@@ -78,7 +78,7 @@ class GoogleDocsClient:
             if status in (429, 500, 502, 503, 504):
                 raise TransientError(f"HTTP {status}") from e
             if status in (401, 403, 404):
-                raise PermanentError(f"HTTP {status}: check OAuth consent/scopes and document access") from e
+                raise PermanentError(f"HTTP {status}: check that Lucid is signed in with access to this document") from e
             if "timed out" in msg.lower():
                 raise OutcomeUnknown(msg) from e
             raise
@@ -151,7 +151,7 @@ def find_section(doc: dict) -> tuple[int, int, str, str | None] | None:
         return None
     m = END_RE.search(text, b)
     if not m:
-        raise ConflictError("managed section end marker missing (edited by user?) — manual repair needed")
+        raise ConflictError("the end marker of Lucid's section is missing (maybe edited by hand); fix the document before syncing again")
     inner = text[b + len(BEGIN) + 1: m.start()]
     last = m.end() - 1
     return idx[b], idx[last] + u16(text[last]), inner, m.group(1) or None

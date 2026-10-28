@@ -46,7 +46,7 @@ class Monitor:
     # -------------------------------------------------- predictions / calibration
     def predict(self, claim: str, confidence: float, task_id: str | None = None) -> str:
         if not 0.0 <= confidence <= 1.0:
-            raise ValueError("confidence must be in [0,1]")
+            raise ValueError("confidence must be between 0 and 1")
         pid = new_id("pred")
         self.s.ex("INSERT INTO predictions (id, task_id, claim, confidence, created_at) VALUES (?,?,?,?,?)",
                   (pid, task_id, claim, confidence, self.s.clock.iso()))
@@ -56,7 +56,7 @@ class Monitor:
         cur = self.s.ex("UPDATE predictions SET outcome=?, resolved_at=? WHERE id=? AND outcome IS NULL",
                         (int(outcome), self.s.clock.iso(), pid))
         if cur.rowcount != 1:
-            raise ValueError("prediction not found or already resolved (outcomes are write-once)")
+            raise ValueError("no open prediction with that id (an outcome can only be recorded once)")
 
     def calibration(self, task_id: str | None = None, bins: int = 5) -> dict[str, Any]:
         sql = "SELECT confidence, outcome FROM predictions WHERE outcome IS NOT NULL"

@@ -18,7 +18,7 @@ from .memory import DATA_FRAME, MemoryStore, Scope, render_memory
 from .util import dumps, loads, new_id
 
 CATEGORIES = {"preference", "project_state", "task_state", "decision", "action", "outcome", "correction",
-              "lesson", "fact", "claim", "summary", "note"}
+              "lesson", "fact", "claim", "summary", "note", "invention"}
 
 
 class SharingDenied(PermissionError):
@@ -35,7 +35,7 @@ class Handoffs:
         cats = sorted(set(categories))
         bad = set(cats) - CATEGORIES
         if bad:
-            raise ValueError(f"unknown categories {sorted(bad)}")
+            raise ValueError(f"unknown categories {sorted(bad)}; use some of {sorted(CATEGORIES)}")
         rid = new_id("rule")
         self.s.ex("INSERT INTO sharing_rules (id, destination, categories, user_scope, project_scope, created_at)"
                   " VALUES (?,?,?,?,?,?)", (rid, destination, dumps(cats), scope.user, scope.project,
@@ -72,8 +72,8 @@ class Handoffs:
         allowed = self.allowed_categories(destination, scope)
         if not preview:
             if not allowed:
-                raise SharingDenied(f"no sharing rule authorises destination {destination!r}; "
-                                    "add one with `lucid share add` or use preview")
+                raise SharingDenied(f"nothing is shared with {destination!r} yet. Choose what it may see with "
+                                    "`lucid share add`, or use preview to see the handoff without sending it")
             denied = requested - allowed
             requested &= allowed
         else:

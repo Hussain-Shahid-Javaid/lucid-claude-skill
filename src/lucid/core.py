@@ -8,6 +8,7 @@ from .decisions import Decisions
 from .handoff import Handoffs
 from .memory import MemoryStore
 from .monitor import Monitor
+from .originality import Originality
 from .research import Experiments
 from .sync import Checkpoints, Outbox
 from .tasks import Tasks
@@ -27,6 +28,7 @@ class Lucid:
         self.decisions = Decisions(self.store, self.memory)
         self.monitor = Monitor(self.store)
         self.experiments = Experiments(self.store)
+        self.originality = Originality(self.store, self.memory)
 
     def close(self) -> None:
         self.store.close()

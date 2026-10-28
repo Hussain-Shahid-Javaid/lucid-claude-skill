@@ -58,7 +58,7 @@ def test_capture_requires_enabled_site_and_rejects_failed_extraction(client, L):
     assert client.post("/api/capture", json=auto, headers=H).status_code == 403
     bad = {**payload, "extraction": {"ok": False, "errors": ["selector .message not found"]}}
     r = client.post("/api/capture", json=bad, headers=H)
-    assert r.status_code == 403 and "extraction failure" in r.json()["detail"]
+    assert r.status_code == 403 and "couldn't read the conversation" in r.json()["detail"]
     client.post("/api/capture/sites", json={"site": "chat.example.com", "enabled": True, "paused": True}, headers=H)
     assert client.post("/api/capture", json=payload, headers=H).status_code == 403
     client.post("/api/capture/sites", json={"site": "chat.example.com", "enabled": False}, headers=H)

@@ -16,6 +16,8 @@ Lucid is a portable AI **skill** plus a small local toolkit that gives assistant
   - Timed default decisions limited by explicit authorizations
   - A bounded verify-and-correct cycle that keeps correct answers from being broken
 - **Observation, not replacement.** A local web dashboard, an optional MCP server, a browser capture extension and storage mirrors to S3 or Google Docs. You keep chatting in your existing AI tools.
+- **Originality checks.** Lucid checks a new idea against its own records and against existing work before anyone calls it new. Each check logs every search and gives the idea a status limited to what was searched: known, adaptation, potentially original within that scope, unresolved, or not assessed. It never says "nobody has thought of this". See [docs/originality.md](docs/originality.md).
+- **Plain-language replies.** The skill tells the assistant to answer first, in plain words, and to keep every fact and caveat. `lucid plain check` flags stiff or wordy text. See [docs/plain-language.md](docs/plain-language.md).
 - **Measurement.** It ships an evaluation runner, a discovery-experiment ledger, and an optional, clearly bounded consciousness-research module.
 
 Lucid works fully offline with **no API keys**. Normal reasoning stays in your host assistant's model. Saving or recalling memory never calls a paid API.
@@ -54,6 +56,10 @@ lucid memory correct <id> "Prefers bun" --reason "switched in October"
 lucid import chatgpt ~/Downloads/chatgpt-export.zip
 lucid share add claude-desktop --categories decision,preference,project_state
 lucid handoff prepare --to claude-desktop --goal "continue the storage refactor"
+lucid invent target "Clients overload a service when they all retry after an outage"
+lucid invent candidate <study> --title "..." --mechanism "how it works" --difference "..." --method change_constraint
+lucid invent check <candidate>            # Lucid's records + the bundled reference collection
+echo "In order to utilize it..." | lucid plain check
 
 # Dashboard (localhost only; prints a one-time link containing the access token)
 lucid serve
@@ -68,10 +74,10 @@ To use it on claude.ai, upload `dist/lucid-skill.zip` through claude.ai's Skills
 | path | what |
 |---|---|
 | `skill/lucid/` | Agent Skill: `SKILL.md`, `references/`, `scripts/lucid.py` (the library is copied into `scripts/lib` at build time) |
-| `src/lucid/` | Core library: `memory`, `conversations`, `importers/`, `handoff`, `sync`, `budget`, `tasks`, `decisions`, `orchestrator`, `verification`, `monitor`, `storage/` (S3, Google Docs), `connectors/`, `capture`, `mcp_server`, `server/` (FastAPI), `evals/`, `research_modules/` |
+| `src/lucid/` | Core library: `memory`, `conversations`, `importers/`, `handoff`, `sync`, `budget`, `tasks`, `decisions`, `orchestrator`, `verification`, `monitor`, `originality`, `plain`, `storage/` (S3, Google Docs), `connectors/`, `capture`, `mcp_server`, `server/` (FastAPI), `evals/`, `research_modules/` |
 | `dashboard/` | React + TypeScript dashboard. `npm run build` writes to `src/lucid/web/` |
 | `extension/` | Manifest V3 browser capture extension, site adapters and versioned fixtures |
-| `tests/` | 92 tests: unit, contract (moto S3, fake Docs), MCP, CLI, service security, Playwright dashboard and extension |
+| `tests/` | 124 tests: unit, contract (moto S3, fake Docs), MCP, CLI, service security, Playwright dashboard and extension |
 | `evals/`, `reports/` | Pre-registration and generated evaluation/research reports |
 | `docs/` | Architecture, storage, compatibility matrix, security, budgets, decisions, research protocols, status |
 | `tools/` | Skill build/validate, Claude Code installer |
@@ -80,7 +86,7 @@ To use it on claude.ai, upload `dist/lucid-skill.zip` through claude.ai's Skills
 
 ```bash
 pip install -e ".[dev]" && python -m playwright install chromium   # browser only if not already present
-pytest                                   # 92 tests; live-provider tests are marked `live` and skipped
+pytest                                   # 124 tests; live-provider tests are marked `live` and skipped
 (cd dashboard && npm ci && npm run build)
 python3 tools/build_skill.py             # validates SKILL.md and writes dist/lucid-skill.zip
 lucid eval run --split heldout           # regenerates reports/evaluation-heldout.{md,json}; 0 model calls
@@ -94,7 +100,8 @@ lucid eval run --split heldout           # regenerates reports/evaluation-heldou
 - [Host capability matrix with sources](docs/compatibility.md)
 - [Conversation exchange format](docs/exchange-format.md)
 - [Budgets](docs/budgets.md) · [Decisions & autonomy](docs/decisions.md) · [Security & privacy](docs/security.md)
+- [Originality checks](docs/originality.md) · [Plain-language replies](docs/plain-language.md)
 - [Browser extension](docs/extension.md) · [Evaluation methodology](docs/evaluation.md) · [Research protocols](docs/research-protocols.md)
-- [Implementation status & limitations](docs/status.md) · [Changelog](CHANGELOG.md) · [v0.1.0 release notes](docs/releases/v0.1.0.md)
+- [Implementation status & limitations](docs/status.md) · [Changelog](CHANGELOG.md) · [v0.2.0 release notes](docs/releases/v0.2.0.md)
 
 License: MIT.

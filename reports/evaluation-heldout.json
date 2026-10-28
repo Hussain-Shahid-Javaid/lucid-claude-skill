@@ -1,6 +1,6 @@
 {
   "split": "heldout",
-  "generated_at": "2026-10-27T19:13:14.762160Z",
+  "generated_at": "2026-10-28T00:51:06.586869Z",
   "python": "3.13.18",
   "preregistration_note": "Primary metrics, splits and conditions fixed before the held-out run. The 'lucid_hybrid' condition and the paraphrase query style were added after inspecting the development split (seed 1); that exposure is disclosed in the report.",
   "memory_suite": {
@@ -59,7 +59,7 @@
         0.0,
         0.0
       ],
-      "wall_s": 15.51
+      "wall_s": 11.94
     },
     "paraphrase": {
       "n": 300,
@@ -116,7 +116,7 @@
         0.007,
         0.037
       ],
-      "wall_s": 16.15
+      "wall_s": 12.2
     }
   },
   "correction_suite": {
@@ -174,9 +174,650 @@
       "relevant_history_in_context"
     ]
   },
+  "originality_suite": {
+    "split": "heldout_b",
+    "n_probes": 16,
+    "truth_counts": {
+      "known": 8,
+      "adaptation": 5,
+      "absent": 3
+    },
+    "conditions": {
+      "title_match": {
+        "known_detected": "0/8",
+        "known_detection_rate": 0.0,
+        "false_originality_claims": "11/13",
+        "false_originality_rate": 0.846,
+        "citation_accuracy": "2/2",
+        "absent_ideas_kept_for_review": "3/3"
+      },
+      "keyword": {
+        "known_detected": "7/8",
+        "known_detection_rate": 0.875,
+        "false_originality_claims": "4/13",
+        "false_originality_rate": 0.308,
+        "citation_accuracy": "9/9",
+        "absent_ideas_kept_for_review": "3/3"
+      },
+      "lucid": {
+        "known_detected": "5/8",
+        "known_detection_rate": 0.625,
+        "false_originality_claims": "0/13",
+        "false_originality_rate": 0.0,
+        "citation_accuracy": "11/11",
+        "difference_named": "5/5",
+        "absent_ideas_kept_for_review": "3/3",
+        "absent_ideas_wrongly_dropped": [],
+        "absent_ideas_claimed_original": 0,
+        "mean_queries_per_candidate": 4.0,
+        "mean_sources_inspected": 2.0,
+        "query_kinds_seen": [
+          "adjacent",
+          "combination",
+          "component",
+          "mechanism",
+          "problem",
+          "synonym"
+        ]
+      }
+    },
+    "internal_duplicates": {
+      "caught": "0/2",
+      "caught_or_flagged": "1/2",
+      "false_duplicates": "0/2",
+      "unrelated_flagged": "0/2",
+      "pairs": [
+        {
+          "truth": true,
+          "caught": false,
+          "flagged_for_review": false,
+          "score": 0.143
+        },
+        {
+          "truth": true,
+          "caught": false,
+          "flagged_for_review": true,
+          "score": 0.312
+        },
+        {
+          "truth": false,
+          "caught": false,
+          "flagged_for_review": false,
+          "score": 0.0
+        },
+        {
+          "truth": false,
+          "caught": false,
+          "flagged_for_review": false,
+          "score": 0.0
+        }
+      ]
+    },
+    "rows": [
+      {
+        "id": "b1",
+        "truth": "known",
+        "truth_source": "bloom-filter",
+        "expect_difference": null,
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "known",
+          "cited": "bloom-filter"
+        },
+        "lucid": {
+          "status": "known",
+          "cited": "bloom-filter",
+          "top_diff": [
+            "stated difference"
+          ],
+          "queries": 4,
+          "inspected": 5,
+          "kinds": [
+            "adjacent",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": false
+        }
+      },
+      {
+        "id": "b2",
+        "truth": "known",
+        "truth_source": "memoization",
+        "expect_difference": null,
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "known",
+          "cited": "memoization"
+        },
+        "lucid": {
+          "status": "known",
+          "cited": "memoization",
+          "top_diff": [
+            "stated difference"
+          ],
+          "queries": 4,
+          "inspected": 1,
+          "kinds": [
+            "adjacent",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": false
+        }
+      },
+      {
+        "id": "b3",
+        "truth": "known",
+        "truth_source": "token-bucket",
+        "expect_difference": null,
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "known",
+          "cited": "token-bucket"
+        },
+        "lucid": {
+          "status": "known",
+          "cited": "token-bucket",
+          "top_diff": [
+            "stated difference"
+          ],
+          "queries": 4,
+          "inspected": 1,
+          "kinds": [
+            "adjacent",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": false
+        }
+      },
+      {
+        "id": "b4",
+        "truth": "known",
+        "truth_source": "vector-clocks",
+        "expect_difference": null,
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "known",
+          "cited": "vector-clocks"
+        },
+        "lucid": {
+          "status": "known",
+          "cited": "vector-clocks",
+          "top_diff": [
+            "stated difference"
+          ],
+          "queries": 4,
+          "inspected": 2,
+          "kinds": [
+            "adjacent",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": false
+        }
+      },
+      {
+        "id": "b5",
+        "truth": "known",
+        "truth_source": "dedup-hash",
+        "expect_difference": null,
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "known",
+          "cited": "dedup-hash"
+        },
+        "lucid": {
+          "status": "unresolved",
+          "cited": null,
+          "top_diff": [
+            "stated difference"
+          ],
+          "queries": 4,
+          "inspected": 5,
+          "kinds": [
+            "adjacent",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": true
+        }
+      },
+      {
+        "id": "b6",
+        "truth": "known",
+        "truth_source": "wal",
+        "expect_difference": null,
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "lucid": {
+          "status": "unresolved",
+          "cited": null,
+          "top_diff": [
+            "stated difference"
+          ],
+          "queries": 4,
+          "inspected": 1,
+          "kinds": [
+            "adjacent",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": true
+        }
+      },
+      {
+        "id": "b7",
+        "truth": "known",
+        "truth_source": "dijkstra",
+        "expect_difference": null,
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "known",
+          "cited": "dijkstra"
+        },
+        "lucid": {
+          "status": "adaptation",
+          "cited": "dijkstra",
+          "top_diff": [
+            "map",
+            "stated difference"
+          ],
+          "queries": 4,
+          "inspected": 1,
+          "kinds": [
+            "adjacent",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": false
+        }
+      },
+      {
+        "id": "b8",
+        "truth": "known",
+        "truth_source": "smart-irrigation",
+        "expect_difference": null,
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "known",
+          "cited": "smart-irrigation"
+        },
+        "lucid": {
+          "status": "known",
+          "cited": "smart-irrigation",
+          "top_diff": [
+            "ai",
+            "stated difference"
+          ],
+          "queries": 4,
+          "inspected": 1,
+          "kinds": [
+            "adjacent",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [
+            "ai_washing"
+          ],
+          "kept": false
+        }
+      },
+      {
+        "id": "b9",
+        "truth": "adaptation",
+        "truth_source": "token-bucket",
+        "expect_difference": "solar",
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "lucid": {
+          "status": "adaptation",
+          "cited": "token-bucket",
+          "top_diff": [
+            "battery",
+            "solar",
+            "stated difference"
+          ],
+          "queries": 4,
+          "inspected": 1,
+          "kinds": [
+            "adjacent",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": false
+        }
+      },
+      {
+        "id": "b10",
+        "truth": "adaptation",
+        "truth_source": "consistent-hashing",
+        "expect_difference": "irrigation",
+        "title_match": {
+          "status": "known",
+          "cited": "consistent-hashing"
+        },
+        "keyword": {
+          "status": "known",
+          "cited": "consistent-hashing"
+        },
+        "lucid": {
+          "status": "adaptation",
+          "cited": "consistent-hashing",
+          "top_diff": [
+            "irrigation",
+            "stated difference"
+          ],
+          "queries": 4,
+          "inspected": 5,
+          "kinds": [
+            "adjacent",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": false
+        }
+      },
+      {
+        "id": "b11",
+        "truth": "adaptation",
+        "truth_source": "undo-log",
+        "expect_difference": "spreadsheet",
+        "title_match": {
+          "status": "known",
+          "cited": "undo-log"
+        },
+        "keyword": {
+          "status": "known",
+          "cited": "undo-log"
+        },
+        "lucid": {
+          "status": "known",
+          "cited": "undo-log",
+          "top_diff": [
+            "spreadsheet",
+            "stated difference"
+          ],
+          "queries": 4,
+          "inspected": 1,
+          "kinds": [
+            "adjacent",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": false
+        }
+      },
+      {
+        "id": "b12",
+        "truth": "adaptation",
+        "truth_source": "merkle-tree",
+        "expect_difference": "blockchain",
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "lucid": {
+          "status": "adaptation",
+          "cited": "merkle-tree",
+          "top_diff": [
+            "blockchain",
+            "stated difference"
+          ],
+          "queries": 4,
+          "inspected": 5,
+          "kinds": [
+            "adjacent",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": false
+        }
+      },
+      {
+        "id": "b13",
+        "truth": "adaptation",
+        "truth_source": "crdt",
+        "expect_difference": "sensor",
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "lucid": {
+          "status": "adaptation",
+          "cited": "crdt",
+          "top_diff": [
+            "irrigation",
+            "sensor",
+            "stated difference"
+          ],
+          "queries": 7,
+          "inspected": 3,
+          "kinds": [
+            "adjacent",
+            "combination",
+            "component",
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [
+            "unexplained_combination"
+          ],
+          "kept": false
+        }
+      },
+      {
+        "id": "b14",
+        "truth": "absent",
+        "truth_source": null,
+        "expect_difference": null,
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "lucid": {
+          "status": "unresolved",
+          "cited": null,
+          "top_diff": [],
+          "queries": 3,
+          "inspected": 0,
+          "kinds": [
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": true
+        }
+      },
+      {
+        "id": "b15",
+        "truth": "absent",
+        "truth_source": null,
+        "expect_difference": null,
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "lucid": {
+          "status": "unresolved",
+          "cited": null,
+          "top_diff": [],
+          "queries": 3,
+          "inspected": 0,
+          "kinds": [
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": true
+        }
+      },
+      {
+        "id": "b16",
+        "truth": "absent",
+        "truth_source": null,
+        "expect_difference": null,
+        "title_match": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "keyword": {
+          "status": "potentially_original",
+          "cited": null
+        },
+        "lucid": {
+          "status": "unresolved",
+          "cited": null,
+          "top_diff": [],
+          "queries": 3,
+          "inspected": 0,
+          "kinds": [
+            "mechanism",
+            "problem",
+            "synonym"
+          ],
+          "flags": [],
+          "kept": true
+        }
+      }
+    ],
+    "wall_s": 2.36,
+    "collection": {
+      "entries": 14,
+      "kinds": [
+        "docs",
+        "papers",
+        "products",
+        "repos",
+        "standards"
+      ],
+      "path": "src/lucid/data/originality_reference.jsonl"
+    },
+    "note": "Thresholds were set on the dev probes. The first held-out set (A) was written before any run on it; its first run exposed two false originality claims (a known mechanism applied in a new domain, matched on only one shared concept). Two general fixes followed: a 'contains the whole known mechanism plus more' adaptation rule, and inflection-tolerant phrase matching. Set A is no longer clean, so a second held-out set (B) was written after the fix and before any run on it; B is the primary held-out result. Set A's first-run numbers are kept in reports/originality-heldout-v1.json.",
+    "set_a": {
+      "after_fix": {
+        "known_detected": "8/9",
+        "known_detection_rate": 0.889,
+        "false_originality_claims": "0/14",
+        "false_originality_rate": 0.0,
+        "citation_accuracy": "13/13",
+        "difference_named": "4/4",
+        "absent_ideas_kept_for_review": "4/4",
+        "absent_ideas_wrongly_dropped": [],
+        "absent_ideas_claimed_original": 1,
+        "mean_queries_per_candidate": 4.0,
+        "mean_sources_inspected": 2.33,
+        "query_kinds_seen": [
+          "adjacent",
+          "combination",
+          "component",
+          "mechanism",
+          "problem",
+          "synonym"
+        ]
+      },
+      "first_run": {
+        "known_detected": "7/9",
+        "known_detection_rate": 0.778,
+        "false_originality_claims": "2/14",
+        "false_originality_rate": 0.143,
+        "citation_accuracy": "10/10",
+        "difference_named": "4/4",
+        "absent_ideas_kept_for_review": "4/4",
+        "absent_ideas_wrongly_dropped": [],
+        "absent_ideas_claimed_original": 1,
+        "mean_queries_per_candidate": 4.0,
+        "mean_sources_inspected": 2.33,
+        "query_kinds_seen": [
+          "adjacent",
+          "combination",
+          "component",
+          "mechanism",
+          "problem",
+          "synonym"
+        ]
+      }
+    }
+  },
   "experiments": [
     {
-      "id": "exp_c0f03c73d3f645dfb903",
+      "id": "exp_dd3e6cdd293741c58bd7",
       "module": "discovery",
       "title": "Recurrence for binary strings without '111'",
       "hypothesis": "The count obeys a low-order integer linear recurrence",
@@ -224,11 +865,11 @@
       "criticism": "Finite agreement is not a proof. A combinatorial proof exists in the literature (transfer-matrix / last-run argument) but was not machine-checked here. Simplicity ordering is a bias, not evidence.",
       "revision_of": null,
       "cost": {},
-      "created_at": "2026-10-27T19:13:46.827717Z",
-      "updated_at": "2026-10-27T19:13:49.552448Z"
+      "created_at": "2026-10-28T00:51:36.229421Z",
+      "updated_at": "2026-10-28T00:51:38.392563Z"
     },
     {
-      "id": "exp_d0c77f0fe1da469da21d",
+      "id": "exp_1cecc2375d6b4b1ba5e3",
       "module": "discovery",
       "title": "Euler polynomial primality (falsification control)",
       "hypothesis": "n^2+n+41 is prime for all n \u2265 0",
@@ -249,11 +890,11 @@
       "criticism": "A single checkable counterexample refutes the claim.",
       "revision_of": null,
       "cost": {},
-      "created_at": "2026-10-27T19:13:49.554994Z",
-      "updated_at": "2026-10-27T19:13:49.555741Z"
+      "created_at": "2026-10-28T00:51:38.394005Z",
+      "updated_at": "2026-10-28T00:51:38.394488Z"
     },
     {
-      "id": "exp_22112b7b59704510a659",
+      "id": "exp_1ca3317a1d2749d2b116",
       "module": "consciousness",
       "title": "GW-1: global availability ablation (functional analogue)",
       "hypothesis": "Integration tasks causally depend on broadcast of module contents",
@@ -311,11 +952,11 @@
       "criticism": "The dissociation is close to guaranteed by construction (modules only know their slices), so the experiment mainly validates the ablation/controls methodology. A stronger test needs learned modules whose dependence on broadcast is not designed in, e.g. an open-weight model with real activation access (see ActivationProbe).",
       "revision_of": null,
       "cost": {},
-      "created_at": "2026-10-27T19:13:49.556800Z",
-      "updated_at": "2026-10-27T19:13:50.188307Z"
+      "created_at": "2026-10-28T00:51:38.395162Z",
+      "updated_at": "2026-10-28T00:51:38.913896Z"
     },
     {
-      "id": "exp_f1bbc761a69f40e49877",
+      "id": "exp_095087a460b348bcb123",
       "module": "consciousness",
       "title": "HO-1: monitoring/abstention ablation (functional analogue)",
       "hypothesis": "A monitor estimating reliability from observable evidence improves calibration",
@@ -338,11 +979,11 @@
       "criticism": "Simulated solver with known noise; real effect sizes require live model runs.",
       "revision_of": null,
       "cost": {},
-      "created_at": "2026-10-27T19:13:50.190511Z",
-      "updated_at": "2026-10-27T19:13:50.192032Z"
+      "created_at": "2026-10-28T00:51:38.916694Z",
+      "updated_at": "2026-10-28T00:51:38.918353Z"
     }
   ],
-  "wall_s": 35.43,
+  "wall_s": 32.33,
   "cost": {
     "model_calls": 0,
     "tokens": 0,

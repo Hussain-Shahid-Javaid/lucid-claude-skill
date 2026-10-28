@@ -14,7 +14,7 @@ import sys
 import time
 
 from ..core import Lucid
-from . import correction_suite, memory_suite
+from . import correction_suite, memory_suite, originality_suite
 from .stats import mean, paired_bootstrap_ci, sign_test_p, wilson
 
 
@@ -107,6 +107,18 @@ def render(report: dict) -> str:
           "## Live-model comparisons", "",
           f"Status: **{report['live_model_suite']['status']}**. Planned conditions: "
           f"{', '.join(report['live_model_suite']['conditions'])}.", ""]
+    if "originality_suite" in report:
+        L += originality_suite.render(report["originality_suite"])
+        sa = report["originality_suite"].get("set_a")
+        if sa:
+            L += ["**Held-out set A (exposed).** "
+                  + (f"First run, before the fix: Lucid made {sa['first_run']['false_originality_claims']} false "
+                     f"originality claims and detected {sa['first_run']['known_detected']} known equivalents. "
+                     if sa.get("first_run") else "")
+                  + f"After the fix: {sa['after_fix']['false_originality_claims']} false claims, "
+                  f"{sa['after_fix']['known_detected']} detected. Set A informed the fix, so only set B (the table "
+                  "above) counts as held out.", ""]
+        L += [f"Exposure: {report['originality_suite']['note']}", ""]
     L += ["## Research experiments", ""]
     for e in report["experiments"]:
         L += [f"### {e['title']} — `{e['status']}`", "", f"- Hypothesis: {e['hypothesis']}",
@@ -138,6 +150,19 @@ def main(argv: list[str] | None = None) -> int:
         "correction_suite": run_correction(pre["correction_suite"], a.split),
         "live_model_suite": pre["live_model_suite"],
     }
+    if "originality_suite" in pre:
+        base = os.path.dirname(os.path.abspath(a.prereg))
+        o = pre["originality_suite"]
+        probes = os.path.join(base, os.path.basename(o["probes"]))
+        dups = os.path.join(base, os.path.basename(o["duplicates"]))
+        report["originality_suite"] = originality_suite.run(probes, dups, o["splits"][a.split])
+        report["originality_suite"]["note"] = o["note"]
+        if a.split == "heldout":
+            exposed = originality_suite.run(probes, dups, "heldout")
+            first = os.path.join(a.out, "originality-heldout-v1.json")
+            report["originality_suite"]["set_a"] = {
+                "after_fix": exposed["conditions"]["lucid"],
+                "first_run": (json.load(open(first))["conditions"]["lucid"] if os.path.exists(first) else None)}
     for mod in (discovery, consciousness):
         mod.run_all(L.experiments)
     report["experiments"] = L.experiments.list()

@@ -445,7 +445,7 @@ def serve(db: str | None = None, *, host: str = "127.0.0.1", port: int = 8765, a
     import uvicorn
     loopback = host in ("127.0.0.1", "localhost", "::1")
     if not loopback and not (allow_remote and tls_cert and tls_key):
-        raise SystemExit("refusing to bind a non-loopback address without --allow-remote and TLS cert/key")
+        raise SystemExit("the dashboard only listens on this computer unless you pass --allow-remote with a TLS certificate and key")
     path, tok = ensure_token()
     with open(path) as fh:
         token_map = json.load(fh)

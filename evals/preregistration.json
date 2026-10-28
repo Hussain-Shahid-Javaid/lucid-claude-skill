@@ -3,22 +3,78 @@
   "note": "Primary metrics, splits and conditions fixed before the held-out run. The 'lucid_hybrid' condition and the paraphrase query style were added after inspecting the development split (seed 1); that exposure is disclosed in the report.",
   "memory_suite": {
     "primary_metric": "accuracy: current value present in retrieved context AND no superseded value presented as current",
-    "primary_comparison": ["history_in_context", "lucid_retrieval"],
-    "dev": {"seed": 1, "n": 60},
-    "heldout": {"seed": 20261027, "n": 300},
+    "primary_comparison": [
+      "history_in_context",
+      "lucid_retrieval"
+    ],
+    "dev": {
+      "seed": 1,
+      "n": 60
+    },
+    "heldout": {
+      "seed": 20261027,
+      "n": 300
+    },
     "budget_tokens": 150,
-    "query_styles": ["keyword", "paraphrase"]
+    "query_styles": [
+      "keyword",
+      "paraphrase"
+    ]
   },
   "correction_suite": {
     "primary_metric": "correct-answer corruption rate among initially-correct drafts",
-    "secondary": ["final correctness", "fix rate among initially-buggy drafts"],
-    "primary_comparison": ["naive", "guarded"],
-    "dev": {"seed": 1, "n": 100},
-    "heldout": {"seed": 20261028, "n": 400}
+    "secondary": [
+      "final correctness",
+      "fix rate among initially-buggy drafts"
+    ],
+    "primary_comparison": [
+      "naive",
+      "guarded"
+    ],
+    "dev": {
+      "seed": 1,
+      "n": 100
+    },
+    "heldout": {
+      "seed": 20261028,
+      "n": 400
+    }
   },
   "live_model_suite": {
     "status": "not run",
     "requires": "LUCID_ENABLE_PAID_CALLS=1, ANTHROPIC_API_KEY, a budget ledger, and a frozen model version",
-    "conditions": ["baseline", "full", "no_memory", "no_monitor", "no_review", "no_correction", "relevant_history_in_context"]
+    "conditions": [
+      "baseline",
+      "full",
+      "no_memory",
+      "no_monitor",
+      "no_review",
+      "no_correction",
+      "relevant_history_in_context"
+    ]
+  },
+  "originality_suite": {
+    "registered": "2026-10-28",
+    "primary_metric": "false originality claims among probes whose truth is known or adaptation",
+    "secondary": [
+      "known-equivalent detection",
+      "citation accuracy",
+      "difference named for adaptations",
+      "absent ideas kept for review",
+      "rephrased duplicates caught",
+      "search cost"
+    ],
+    "conditions": [
+      "title_match",
+      "keyword",
+      "lucid"
+    ],
+    "probes": "evals/originality_probes.jsonl",
+    "duplicates": "evals/originality_duplicates.jsonl",
+    "note": "Thresholds were set on the dev probes. The first held-out set (A) was written before any run on it; its first run exposed two false originality claims (a known mechanism applied in a new domain, matched on only one shared concept). Two general fixes followed: a 'contains the whole known mechanism plus more' adaptation rule, and inflection-tolerant phrase matching. Set A is no longer clean, so a second held-out set (B) was written after the fix and before any run on it; B is the primary held-out result. Set A's first-run numbers are kept in reports/originality-heldout-v1.json.",
+    "splits": {
+      "dev": "dev",
+      "heldout": "heldout_b"
+    }
   }
 }

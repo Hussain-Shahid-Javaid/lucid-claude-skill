@@ -97,9 +97,9 @@ class Decisions:
     def authorize(self, category: str, *, scope: str = "*", limits: dict | None = None,
                   expires_in_s: float | None = None) -> dict:
         if category in NEVER_DEFAULT:
-            raise DecisionError(f"category {category!r} can never be resolved by silence; it requires an explicit "
-                                "answer each time (use a standing external-action authorization with explicit "
-                                "scope via `authorize_action` instead)")
+            raise DecisionError(f"{category!r} decisions always need your answer; silence never counts as yes. "
+                                "To let Lucid do one specific external action without asking, give it a narrow, "
+                                "limited permission with authorize_action")
         if category not in DEFAULTABLE:
             raise DecisionError(f"unknown defaultable category {category!r}; allowed: {sorted(DEFAULTABLE)}")
         return self._insert_auth(category, scope, limits, expires_in_s)
@@ -107,9 +107,9 @@ class Decisions:
     def authorize_action(self, action: str, *, scope: str, limits: dict, expires_in_s: float | None = None) -> dict:
         """Separately configured standing authorization for a specific external action, with explicit scope/limits."""
         if not scope or scope == "*":
-            raise DecisionError("external-action authorizations need an explicit, narrow scope")
+            raise DecisionError("say exactly where this permission applies; \"*\" is too broad")
         if not limits:
-            raise DecisionError("external-action authorizations need explicit limits (e.g. max_count)")
+            raise DecisionError("give this permission a limit, such as max_count")
         return self._insert_auth(f"action:{action}", scope, limits, expires_in_s)
 
     def _insert_auth(self, category: str, scope: str, limits: dict | None, expires_in_s: float | None) -> dict:
@@ -145,9 +145,9 @@ class Decisions:
             consequence: str = "", required_approval: bool = False, pref_key: str | None = None,
             mem_scope: Scope = Scope()) -> dict:
         if len(options) < 1:
-            raise DecisionError("need at least one option")
+            raise DecisionError("a question needs at least one option")
         if default is not None and default not in options:
-            raise DecisionError("default must be one of the options")
+            raise DecisionError("the default has to be one of the options")
         if category in NEVER_DEFAULT:
             required_approval = True
         # 1. Don't ask what's already answered: consult remembered preferences.
@@ -245,7 +245,7 @@ class Decisions:
     def accept_default(self, qid: str, by: str = "user") -> dict:
         q = self.get(qid)
         if not q["default_option"]:
-            raise DecisionError("question has no default")
+            raise DecisionError("this question has no default to apply")
         return self.answer(qid, q["default_option"], by=by)
 
     def pause(self, qid: str) -> bool:

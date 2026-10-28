@@ -1,4 +1,4 @@
-# Implementation status (2026-10-28)
+# Implementation status (2026-10-28, v0.2.0)
 
 Legend:
 - **Implemented:** the code exists.
@@ -38,6 +38,10 @@ Legend:
 | claude.ai skill upload | packaged (`dist/lucid-skill.zip`); **not live-verified** | |
 | Evaluations | offline suites run (held-out); **live-model suite not run** | `reports/evaluation-heldout.md` |
 | Discovery experiments | run | rediscovery (positive control) and falsification control |
+| Originality checking and prior-art workflow | implemented, tested offline | `tests/test_originality.py` covers every case in the spec. Lucid **cannot browse**: web searches are the host's own, logged through the CLI. The bundled reference collection has 14 entries; the concept thesaurus has 44 concepts. Held-out probes: 0/13 false originality claims, but 5/8 known equivalents detected (keyword baseline: 7/8). |
+| Originality: parallel ideation / prior-art / skeptic workers | implemented, tested offline (deterministic workers) | shared budget ledger; independent assessments stored. Host-native subagents get a delegation plan (`invent workers`) and are not driven by Lucid. |
+| Plain-language replies | rules in SKILL.md; checker implemented, tested offline | The checker is heuristic. Whether a live model follows the rules in a Claude Code session has **not been measured**. |
+| MCP tools for originality and plain-language checks | **not implemented** | CLI only in v0.2.0 |
 | Consciousness-related experiments | run (functional, simulated) | GW-1, HO-1, with bounded claims; `ActivationProbe` needs real open-weight access |
 
 ## Independent review (2026-10-28)

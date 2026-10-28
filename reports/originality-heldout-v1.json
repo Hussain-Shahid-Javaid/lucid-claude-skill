@@ -1,0 +1,670 @@
+{
+  "split": "heldout",
+  "n_probes": 18,
+  "truth_counts": {
+    "known": 9,
+    "adaptation": 5,
+    "absent": 4
+  },
+  "conditions": {
+    "title_match": {
+      "known_detected": "0/9",
+      "known_detection_rate": 0.0,
+      "false_originality_claims": "13/14",
+      "false_originality_rate": 0.929,
+      "citation_accuracy": "0/1",
+      "absent_ideas_kept_for_review": "4/4"
+    },
+    "keyword": {
+      "known_detected": "6/9",
+      "known_detection_rate": 0.667,
+      "false_originality_claims": "5/14",
+      "false_originality_rate": 0.357,
+      "citation_accuracy": "9/9",
+      "absent_ideas_kept_for_review": "4/4"
+    },
+    "lucid": {
+      "known_detected": "7/9",
+      "known_detection_rate": 0.778,
+      "false_originality_claims": "2/14",
+      "false_originality_rate": 0.143,
+      "citation_accuracy": "10/10",
+      "difference_named": "4/4",
+      "absent_ideas_kept_for_review": "4/4",
+      "absent_ideas_wrongly_dropped": [],
+      "absent_ideas_claimed_original": 1,
+      "mean_queries_per_candidate": 4.0,
+      "mean_sources_inspected": 2.33,
+      "query_kinds_seen": [
+        "adjacent",
+        "combination",
+        "component",
+        "mechanism",
+        "problem",
+        "synonym"
+      ]
+    }
+  },
+  "internal_duplicates": {
+    "caught": "0/3",
+    "caught_or_flagged": "2/3",
+    "false_duplicates": "0/3",
+    "unrelated_flagged": "0/3",
+    "pairs": [
+      {
+        "truth": true,
+        "caught": false,
+        "flagged_for_review": false,
+        "score": 0.267
+      },
+      {
+        "truth": true,
+        "caught": false,
+        "flagged_for_review": true,
+        "score": 0.333
+      },
+      {
+        "truth": true,
+        "caught": false,
+        "flagged_for_review": true,
+        "score": 0.312
+      },
+      {
+        "truth": false,
+        "caught": false,
+        "flagged_for_review": false,
+        "score": 0.014
+      },
+      {
+        "truth": false,
+        "caught": false,
+        "flagged_for_review": false,
+        "score": 0.0
+      },
+      {
+        "truth": false,
+        "caught": false,
+        "flagged_for_review": false,
+        "score": 0.0
+      }
+    ]
+  },
+  "rows": [
+    {
+      "id": "h1",
+      "truth": "known",
+      "truth_source": "bloom-filter",
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "lucid": {
+        "status": "known",
+        "cited": "bloom-filter",
+        "top_diff": [
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 5,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": false
+      }
+    },
+    {
+      "id": "h2",
+      "truth": "known",
+      "truth_source": "exp-backoff",
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "lucid": {
+        "status": "unresolved",
+        "cited": null,
+        "top_diff": [
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 1,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": true
+      }
+    },
+    {
+      "id": "h3",
+      "truth": "known",
+      "truth_source": "consistent-hashing",
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "known",
+        "cited": "consistent-hashing"
+      },
+      "lucid": {
+        "status": "known",
+        "cited": "consistent-hashing",
+        "top_diff": [
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 5,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": false
+      }
+    },
+    {
+      "id": "h4",
+      "truth": "known",
+      "truth_source": "crdt",
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "known",
+        "cited": "crdt"
+      },
+      "lucid": {
+        "status": "known",
+        "cited": "crdt",
+        "top_diff": [
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 2,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": false
+      }
+    },
+    {
+      "id": "h5",
+      "truth": "known",
+      "truth_source": "vector-clocks",
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "known",
+        "cited": "vector-clocks"
+      },
+      "lucid": {
+        "status": "unresolved",
+        "cited": null,
+        "top_diff": [
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 1,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": true
+      }
+    },
+    {
+      "id": "h6",
+      "truth": "known",
+      "truth_source": "merkle-tree",
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "lucid": {
+        "status": "known",
+        "cited": "merkle-tree",
+        "top_diff": [
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 5,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": false
+      }
+    },
+    {
+      "id": "h7",
+      "truth": "known",
+      "truth_source": "sharding",
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "known",
+        "cited": "sharding"
+      },
+      "lucid": {
+        "status": "known",
+        "cited": "sharding",
+        "top_diff": [
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 5,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": false
+      }
+    },
+    {
+      "id": "h8",
+      "truth": "known",
+      "truth_source": "undo-log",
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "known",
+        "cited": "undo-log"
+      },
+      "lucid": {
+        "status": "known",
+        "cited": "undo-log",
+        "top_diff": [
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 1,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": false
+      }
+    },
+    {
+      "id": "h9",
+      "truth": "adaptation",
+      "truth_source": "token-bucket",
+      "expect_difference": "irrigation",
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "known",
+        "cited": "token-bucket"
+      },
+      "lucid": {
+        "status": "potentially_original",
+        "cited": null,
+        "top_diff": [
+          "irrigation",
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 2,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": true
+      }
+    },
+    {
+      "id": "h10",
+      "truth": "adaptation",
+      "truth_source": "wal",
+      "expect_difference": "spreadsheet",
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "known",
+        "cited": "wal"
+      },
+      "lucid": {
+        "status": "potentially_original",
+        "cited": null,
+        "top_diff": [
+          "spreadsheet",
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 1,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": true
+      }
+    },
+    {
+      "id": "h11",
+      "truth": "adaptation",
+      "truth_source": "bloom-filter",
+      "expect_difference": "blockchain",
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "known",
+        "cited": "bloom-filter"
+      },
+      "lucid": {
+        "status": "adaptation",
+        "cited": "bloom-filter",
+        "top_diff": [
+          "blockchain",
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 5,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": false
+      }
+    },
+    {
+      "id": "h12",
+      "truth": "adaptation",
+      "truth_source": "dijkstra",
+      "expect_difference": "solar",
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "lucid": {
+        "status": "adaptation",
+        "cited": "dijkstra",
+        "top_diff": [
+          "map",
+          "solar",
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 1,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": false
+      }
+    },
+    {
+      "id": "h13",
+      "truth": "adaptation",
+      "truth_source": "merkle-tree",
+      "expect_difference": null,
+      "title_match": {
+        "status": "known",
+        "cited": "undo-log"
+      },
+      "keyword": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "lucid": {
+        "status": "adaptation",
+        "cited": "merkle-tree",
+        "top_diff": [
+          "undo",
+          "stated difference"
+        ],
+        "queries": 7,
+        "inspected": 6,
+        "kinds": [
+          "adjacent",
+          "combination",
+          "component",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [
+          "unexplained_combination"
+        ],
+        "kept": false
+      }
+    },
+    {
+      "id": "h14",
+      "truth": "known",
+      "truth_source": "smart-irrigation",
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "known",
+        "cited": "smart-irrigation"
+      },
+      "lucid": {
+        "status": "known",
+        "cited": "smart-irrigation",
+        "top_diff": [
+          "ai",
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 1,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [
+          "ai_washing"
+        ],
+        "kept": false
+      }
+    },
+    {
+      "id": "h15",
+      "truth": "absent",
+      "truth_source": null,
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "lucid": {
+        "status": "unresolved",
+        "cited": null,
+        "top_diff": [],
+        "queries": 3,
+        "inspected": 0,
+        "kinds": [
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": true
+      }
+    },
+    {
+      "id": "h16",
+      "truth": "absent",
+      "truth_source": null,
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "lucid": {
+        "status": "unresolved",
+        "cited": null,
+        "top_diff": [],
+        "queries": 3,
+        "inspected": 0,
+        "kinds": [
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": true
+      }
+    },
+    {
+      "id": "h17",
+      "truth": "absent",
+      "truth_source": null,
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "lucid": {
+        "status": "unresolved",
+        "cited": null,
+        "top_diff": [],
+        "queries": 3,
+        "inspected": 0,
+        "kinds": [
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": true
+      }
+    },
+    {
+      "id": "h18",
+      "truth": "absent",
+      "truth_source": null,
+      "expect_difference": null,
+      "title_match": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "keyword": {
+        "status": "potentially_original",
+        "cited": null
+      },
+      "lucid": {
+        "status": "potentially_original",
+        "cited": null,
+        "top_diff": [
+          "lock",
+          "stated difference"
+        ],
+        "queries": 4,
+        "inspected": 1,
+        "kinds": [
+          "adjacent",
+          "mechanism",
+          "problem",
+          "synonym"
+        ],
+        "flags": [],
+        "kept": true
+      }
+    }
+  ],
+  "wall_s": 2.48,
+  "collection": {
+    "entries": 14,
+    "kinds": [
+      "docs",
+      "papers",
+      "products",
+      "repos",
+      "standards"
+    ],
+    "path": "src/lucid/data/originality_reference.jsonl"
+  },
+  "label": "first held-out run, before the fix it exposed"
+}

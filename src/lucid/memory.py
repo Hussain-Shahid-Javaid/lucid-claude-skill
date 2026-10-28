@@ -22,7 +22,7 @@ from .redact import find_secrets, redact
 from .util import SCHEMA_VERSION, approx_tokens, dumps, loads, new_id, parse_iso, sha256
 
 KINDS = {"preference", "project_state", "task_state", "decision", "action", "outcome",
-         "correction", "lesson", "fact", "claim", "summary", "note"}
+         "correction", "lesson", "fact", "claim", "summary", "note", "invention"}
 ORIGINS = {"user", "assistant", "tool", "import", "lucid_summary", "experiment"}
 VERIFICATION = {"verified", "unverified", "disputed", "refuted"}
 SHARING = {"private", "project", "shared"}
@@ -68,7 +68,7 @@ def _ttl_to_expiry(now: _dt.datetime, ttl: str | None) -> str | None:
         return None
     m = re.fullmatch(r"(\d+)([smhdw])", ttl.strip())
     if not m:
-        raise MemoryError(f"bad ttl {ttl!r}; use e.g. 30d, 12h")
+        raise MemoryError(f"can't read the expiry {ttl!r}; write it like 30d or 12h")
     n, unit = int(m.group(1)), m.group(2)
     secs = n * {"s": 1, "m": 60, "h": 3600, "d": 86400, "w": 604800}[unit]
     from .util import iso
@@ -125,17 +125,17 @@ class MemoryStore:
             retention: str | None = None, tags: Iterable[str] = (), evidence: Iterable[Evidence | dict] = (),
             op_id: str | None = None, allow_resurrect: bool = False, actor: str = "user") -> dict:
         if not content or not content.strip():
-            raise MemoryError("content is empty")
+            raise MemoryError("the memory text is empty")
         if kind not in KINDS:
-            raise MemoryError(f"unknown kind {kind!r}")
+            raise MemoryError(f"{kind!r} isn't a memory kind; use one of {sorted(KINDS)}")
         if origin not in ORIGINS:
-            raise MemoryError(f"unknown origin {origin!r}")
+            raise MemoryError(f"{origin!r} isn't a known origin; use one of {sorted(ORIGINS)}")
         if verification not in VERIFICATION:
             raise MemoryError(f"unknown verification {verification!r}")
         if sharing not in SHARING:
             raise MemoryError(f"unknown sharing {sharing!r}")
         if confidence is not None and not 0.0 <= confidence <= 1.0:
-            raise MemoryError("confidence must be in [0,1]")
+            raise MemoryError("confidence must be between 0 and 1")
         ev = [e if isinstance(e, Evidence) else Evidence(**e) for e in evidence]
 
         secrets = find_secrets(content)
@@ -163,8 +163,8 @@ class MemoryStore:
             if not allow_resurrect:
                 tomb = c.execute("SELECT 1 FROM tombstones WHERE natural_key=?", (natural_key,)).fetchone()
                 if tomb:
-                    raise MemoryError("this memory was deleted earlier (tombstoned); "
-                                      "pass allow_resurrect=True for an explicit user re-add")
+                    raise MemoryError("you deleted this memory earlier, so it stays deleted (tombstoned). "
+                                      "To add it back on purpose, pass allow_resurrect=True")
             dup = c.execute(
                 "SELECT id FROM memories WHERE content_hash=? AND status='active'", (chash,)
             ).fetchone()
@@ -388,10 +388,10 @@ class MemoryStore:
         allowed = {"tags", "sharing", "expires_at", "uncertainty", "confidence", "retention", "key", "rationale"}
         bad = set(fields) - allowed
         if bad:
-            raise MemoryError(f"cannot edit {sorted(bad)} in place; use supersede/correct for content")
+            raise MemoryError(f"{sorted(bad)} can't be edited in place; to change the text, use correct (the old text stays in the history)")
         m = self.get(mid)
         if m["status"] != "active":
-            raise MemoryError("only active memories can be edited")
+            raise MemoryError("this memory is no longer active, so it can't be edited")
         sets, params = [], []
         for k, v in fields.items():
             if k == "tags":
@@ -414,7 +414,7 @@ class MemoryStore:
                   actor: str = "user", kind: str | None = None) -> dict:
         old = self.get(mid)
         if old["status"] != "active":
-            raise MemoryError(f"memory {mid} is {old['status']}, cannot supersede")
+            raise MemoryError(f"memory {mid} is {old['status']}, so it can't be replaced")
         scope = Scope(old["user_scope"], old["project_scope"])
         with self.s.tx() as c:
             # Retire the old record first so the new one does not conflict with it.
@@ -425,7 +425,7 @@ class MemoryStore:
                            sharing=old["sharing"], tags=old["tags"], retention=old["retention"],
                            allow_resurrect=True, actor=actor)
             if new.get("deduplicated"):
-                raise MemoryError("replacement content is identical to an existing active memory")
+                raise MemoryError("the new text matches a memory you already have")
             c.execute("UPDATE memories SET superseded_by=? WHERE id=?", (new["id"], mid))
             c.execute("UPDATE memories SET supersedes=?, revision=? WHERE id=?",
                       (mid, old["revision"] + 1, new["id"]))
@@ -454,7 +454,7 @@ class MemoryStore:
         if not conf:
             raise MemoryError("conflict not found")
         if keep and keep not in (conf["memory_a"], conf["memory_b"]):
-            raise MemoryError("keep must be one of the conflicting memories")
+            raise MemoryError("choose one of the two conflicting memories to keep")
         with self.s.tx() as c:
             if keep:
                 loser = conf["memory_b"] if keep == conf["memory_a"] else conf["memory_a"]

@@ -130,8 +130,8 @@ class Tasks:
             else:
                 break
         if streak >= self.no_progress_limit:
-            raise NoProgress(f"approach {approach!r} repeated {streak}x without new evidence; replan with a "
-                             "materially different approach")
+            raise NoProgress(f"{approach!r} has been tried {streak} times with nothing new learned. Try something "
+                             "clearly different")
         return {"attempts": len(hist), "streak": streak}
 
     # -------------------------------------------------------------- finish

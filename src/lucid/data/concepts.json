@@ -1,0 +1,308 @@
+{
+ "retry": [
+  "retry",
+  "re-attempt",
+  "reattempt",
+  "try again",
+  "resend",
+  "re-send",
+  "repeat the request"
+ ],
+ "backoff": [
+  "backoff",
+  "back off",
+  "exponential delay",
+  "growing delay",
+  "increasing delay",
+  "wait longer each time",
+  "doubling the wait",
+  "doubles the wait",
+  "progressively longer pause",
+  "longer pause",
+  "doubles each time",
+  "pause that doubles",
+  "delay that doubles",
+  "exponentially growing delay",
+  "exponential backoff"
+ ],
+ "jitter": [
+  "jitter",
+  "random delay",
+  "randomized delay",
+  "random offset"
+ ],
+ "cache": [
+  "cache",
+  "caching",
+  "memoize",
+  "memoization",
+  "store results",
+  "remember previous answers",
+  "keep recent results",
+  "reuse earlier results"
+ ],
+ "hash": [
+  "hash",
+  "hashing",
+  "fingerprint",
+  "digest",
+  "checksum"
+ ],
+ "probabilistic": [
+  "probabilistic",
+  "approximate",
+  "false positive",
+  "false positives",
+  "might be wrong occasionally",
+  "occasionally wrong"
+ ],
+ "membership": [
+  "membership",
+  "set membership",
+  "seen before",
+  "already seen",
+  "is in the set",
+  "presence check"
+ ],
+ "bitarray": [
+  "bit array",
+  "bitmap",
+  "bitset",
+  "array of bits",
+  "bits"
+ ],
+ "consensus": [
+  "consensus",
+  "agreement protocol",
+  "leader election",
+  "majority vote",
+  "quorum"
+ ],
+ "replication": [
+  "replicate",
+  "replication",
+  "replica",
+  "replicas",
+  "copies on several machines",
+  "copies on several machines",
+  "copy on each machine"
+ ],
+ "log": [
+  "journal",
+  "append-only",
+  "append only",
+  "write-ahead",
+  "write ahead",
+  "record changes first",
+  "write-ahead log",
+  "append-only log",
+  "log file",
+  "replay the log",
+  "logs"
+ ],
+ "snapshot": [
+  "snapshot",
+  "checkpoint",
+  "point-in-time copy"
+ ],
+ "queue": [
+  "queue",
+  "outbox",
+  "buffer",
+  "pending list",
+  "backlog"
+ ],
+ "lock": [
+  "lock",
+  "mutex",
+  "exclusive access",
+  "locking"
+ ],
+ "tree": [
+  "tree",
+  "hierarchy",
+  "hierarchical",
+  "parent and child nodes"
+ ],
+ "merge": [
+  "merge",
+  "reconcile",
+  "combine changes",
+  "join states"
+ ],
+ "conflictfree": [
+  "conflict-free",
+  "conflict free",
+  "commutative",
+  "order-independent",
+  "order independent",
+  "any order"
+ ],
+ "vectorclock": [
+  "vector clock",
+  "version vector",
+  "logical clock",
+  "lamport"
+ ],
+ "partition": [
+  "shard",
+  "sharding",
+  "partition",
+  "partitioning",
+  "split the data",
+  "split data"
+ ],
+ "ring": [
+  "circle",
+  "circular space",
+  "wrap around"
+ ],
+ "loadbalance": [
+  "load balancing",
+  "load balancer",
+  "spread requests",
+  "distribute requests",
+  "even out load"
+ ],
+ "compress": [
+  "compress",
+  "compression",
+  "shrink",
+  "encode smaller",
+  "smaller encoding"
+ ],
+ "dedupe": [
+  "dedupe",
+  "deduplicate",
+  "deduplication",
+  "duplicate removal",
+  "remove duplicates"
+ ],
+ "ratelimit": [
+  "rate limit",
+  "rate limiting",
+  "throttle",
+  "throttling",
+  "token bucket",
+  "leaky bucket",
+  "requests per second cap"
+ ],
+ "verify": [
+  "verify",
+  "verification",
+  "validate"
+ ],
+ "consistent": [
+  "consistent hashing",
+  "minimal remapping",
+  "few keys move"
+ ],
+ "index": [
+  "index",
+  "inverted index",
+  "lookup table"
+ ],
+ "ai": [
+  "ai-powered",
+  "ai powered",
+  "ai",
+  "artificial intelligence",
+  "machine learning",
+  "ml",
+  "smart",
+  "intelligent"
+ ],
+ "predict": [
+  "predict",
+  "prediction",
+  "forecast",
+  "classify",
+  "machine-learned model",
+  "trained model",
+  "learned model"
+ ],
+ "sensor": [
+  "sensor",
+  "sensors",
+  "telemetry",
+  "measurements"
+ ],
+ "irrigation": [
+  "irrigation",
+  "watering",
+  "water the plants",
+  "crops",
+  "farm"
+ ],
+ "soil": [
+  "soil moisture",
+  "soil",
+  "moisture"
+ ],
+ "schedule": [
+  "schedule",
+  "scheduling",
+  "timetable",
+  "timer"
+ ],
+ "notification": [
+  "notify",
+  "notification",
+  "alert",
+  "push message"
+ ],
+ "map": [
+  "navigation",
+  "route",
+  "routing",
+  "map route",
+  "road map",
+  "maps app"
+ ],
+ "battery": [
+  "battery",
+  "energy"
+ ],
+ "solar": [
+  "solar",
+  "photovoltaic",
+  "sunlight"
+ ],
+ "blockchain": [
+  "blockchain",
+  "distributed ledger",
+  "chain of blocks"
+ ],
+ "merkle": [
+  "merkle",
+  "hash tree",
+  "tree of hashes"
+ ],
+ "diff": [
+  "diff",
+  "difference",
+  "delta",
+  "changes between versions"
+ ],
+ "undo": [
+  "undo",
+  "revert",
+  "roll back",
+  "rollback"
+ ],
+ "spreadsheet": [
+  "spreadsheet",
+  "formula"
+ ],
+ "graph": [
+  "graph",
+  "nodes and edges",
+  "network of"
+ ],
+ "shortestpath": [
+  "shortest path",
+  "dijkstra",
+  "cheapest route",
+  "fewest hops"
+ ]
+}

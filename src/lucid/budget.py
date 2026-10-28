@@ -111,23 +111,23 @@ class BudgetLedger:
         if need <= 0:
             raise ValueError("reservation must be positive")
         if context_window is not None and need > context_window:
-            raise InsufficientBudget(f"call needs {need} tokens but the model context window is {context_window}",
+            raise InsufficientBudget(f"this call needs {need} tokens, more than the model's context window of {context_window}",
                                      {"context_window": context_window})
         with self.s.tx() as c:  # BEGIN IMMEDIATE: atomic across threads and processes
             t = self._totals(c, lid)
             if t["time_limit_s"] is not None and t["elapsed_s"] >= t["time_limit_s"]:
-                raise InsufficientBudget("time budget exhausted", t)
+                raise InsufficientBudget("out of time: the time budget is used up", t)
             if t["token_limit"] is not None:
                 avail = t["available_including_reserve"] if use_reserve else t["available_tokens"]
                 if need > avail:
-                    raise InsufficientBudget(f"{purpose}: needs {need} tokens, {avail} available"
-                                             f"{' (incl. reserve)' if use_reserve else ' (reserve held back)'}", t)
+                    raise InsufficientBudget(f"{purpose}: needs {need} tokens but only {avail} are left"
+                                             f"{' (including the reserve)' if use_reserve else ' (the verification reserve is held back)'}", t)
             if t["cost_limit"] is not None:
                 if t["mode"] == "hard" and not est_cost:
-                    raise InsufficientBudget(f"{purpose}: a hard cost limit needs a cost estimate per call", t)
+                    raise InsufficientBudget(f"{purpose}: with a hard cost limit, every call needs a cost estimate first", t)
                 if t["cost_used"] + t["cost_held"] + est_cost > t["cost_limit"] or \
                         t["cost_used"] + t["cost_held"] >= t["cost_limit"]:
-                    raise InsufficientBudget(f"{purpose}: cost budget exhausted or would be exceeded", t)
+                    raise InsufficientBudget(f"{purpose}: this would go over the cost budget", t)
             eid = new_id("res")
             now = self.s.clock.iso()
             c.execute("INSERT INTO budget_entries (id, ledger_id, purpose, actor, status, reserved_tokens, reserved_cost,"

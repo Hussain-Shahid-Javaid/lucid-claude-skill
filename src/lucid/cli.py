@@ -319,6 +319,156 @@ def cmd_admin(args) -> int:
     return 0
 
 
+
+# --------------------------------------------------------------------------- invent
+def _split_kv(items):
+    out = {}
+    for it in items or []:
+        if "=" not in it:
+            raise SystemExit(f"expected NAME=COMMAND, got {it!r}")
+        k, v = it.split("=", 1)
+        out[k.strip()] = v.strip()
+    return out
+
+
+def _run_check_cmd(cmd: str, timeout: int = 300):
+    import shlex
+    import subprocess
+    argv = shlex.split(cmd)
+    try:
+        p = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
+        return p.returncode == 0, f"$ {cmd}\nexit={p.returncode}\n{(p.stdout + p.stderr)[-1200:]}"
+    except (OSError, subprocess.TimeoutExpired) as e:
+        return False, f"$ {cmd}\nerror: {e}"
+
+
+def cmd_invent(args) -> int:
+    from .originality import LocalCollectionProvider, OriginalityError, UnavailableProvider
+    L = _lucid(args)
+    O = L.originality
+    a = args.action
+    try:
+        if a == "target":
+            st = O.create_study(args.problem, scope=_scope(args), users=args.users or "",
+                                constraints=args.constraint or [], existing_approaches=args.existing or [],
+                                improvement=args.improvement or "", level=args.level,
+                                confidential_terms=args.confidential or [],
+                                allowed_providers=args.allow or ["local:reference"],
+                                required_providers=args.require, ledger_id=args.ledger)
+            _out(args, st, f"study {st['id']}\n  problem: {st['target']['problem']}\n"
+                           f"  searches allowed: {', '.join(st['target']['allowed_providers'])}")
+        elif a == "candidate":
+            c = O.add_candidate(args.study, args.title, args.mechanism, args.difference or "", args.method,
+                                advantage=args.advantage, components=args.component or [], domain=args.domain,
+                                revisit_of=args.revisit_of, revisit_reason=args.revisit_reason)
+            warn = ("\n  warning: " + ", ".join(c["cosmetic_flags"])) if c["cosmetic_flags"] else ""
+            _out(args, c, f"candidate {c['id']}: {c['title']}{warn}")
+        elif a == "check":
+            provs = []
+            if not args.no_local:
+                provs.append(LocalCollectionProvider(args.collection) if args.collection else LocalCollectionProvider())
+            for name in args.offline or []:
+                provs.append(UnavailableProvider(name))
+            res = O.check(args.id, provs)
+            lines = [f"{res['status_text']}", f"  {res['claim']}"]
+            for r in res["reasons"]:
+                lines.append(f"  - {r}")
+            for p in res["precedents"][:3]:
+                lines.append(f"  closest: {p['title']} (similarity {p['similarity']:.2f}"
+                             f"{', inspected' if p['inspected'] else ', not inspected'})")
+            cov = res["coverage"]
+            lines.append(f"  searched: {cov['queries_run']} queries ran, {cov['queries_failed']} failed; "
+                         f"kinds {', '.join(cov['query_kinds']) or 'none'}")
+            _out(args, res, "\n".join(lines))
+        elif a == "not-a-repeat":
+            _out(args, O.not_a_repeat(args.id, args.match, args.reason), f"noted: {args.id} is not a repeat of {args.match}")
+        elif a == "plan":
+            _out(args, O.plan_queries(args.id), "\n".join(f"[{q['kind']}] {q['external_query']}"
+                                                           for q in O.plan_queries(args.id)))
+        elif a == "search-log":
+            sid = O.log_search(args.id, args.provider, args.query, args.kind, args.status,
+                               result_count=args.results, note=args.note,
+                               covers=args.covers.split(",") if args.covers else ())
+            _out(args, {"id": sid}, f"logged search {sid} ({args.status})")
+        elif a == "add-source":
+            s = O.add_source(args.id, args.provider, kind=args.kind, ref=args.ref, title=args.title,
+                             summary=args.summary, inspected=args.inspected, relation=args.relation,
+                             differences=args.differences, found_by=args.found_by)
+            _out(args, s, f"source {s['id']}: {s['title']} (similarity {s['similarity']:.2f})")
+        elif a == "inspect":
+            s = O.inspect(args.id, relation=args.relation, differences=args.differences)
+            _out(args, s, f"inspected {s['id']}: {s['relation'] or 'no relation set'}")
+        elif a == "assess":
+            if args.role:
+                aid = O.record_assessment(args.id, args.role, args.verdict, args.rationale or "",
+                                          saw_others=args.saw_others)
+                _out(args, {"id": aid}, f"recorded {args.role} assessment {aid}")
+            else:
+                res = O.assess(args.id)
+                _out(args, res, f"{res['status_text']}\n  {res['claim']}")
+        elif a == "value":
+            results = {name: _run_check_cmd(cmd) for name, cmd in _split_kv(args.check).items()}
+            v = O.assess_value(args.id, results=results, feasibility=args.feasibility, usefulness=args.usefulness,
+                               resources_=args.resources, advantage_evidence=args.advantage_evidence)
+            lines = [f"value: {v['status']}"] + [f"  {n}: {'passed' if o['passed'] else 'failed'}"
+                                                 for n, o in v["checks"].items()]
+            _out(args, v, "\n".join(lines))
+        elif a == "gate":
+            g = O.gate(args.study, original_only=not args.include_incremental)
+            lines = [g["message"]]
+            for q in g["qualifying"]:
+                lines.append(f"  keep  {q['id']}  {q['title']}")
+            for q in g["incremental"] + g["incremental_held_back"]:
+                tag = "incr " if g["incremental"] else "held "
+                lines.append(f"  {tag} {q['id']}  {q['title']} (builds on existing work)")
+            for q in g["excluded"]:
+                lines.append(f"  drop  {q['id']}  {q['title']}: {q['reason']}")
+            _out(args, g, "\n".join(lines))
+        elif a == "record":
+            if args.save:
+                m = O.save_record(args.id)
+                _out(args, m, f"saved invention record as memory {m['id']}")
+            elif args.markdown:
+                print(O.render_record(args.id))
+            else:
+                _out(args, O.record(args.id))
+        elif a == "workers":
+            _out(args, O.worker_plan(args.study))
+        elif a == "show":
+            st = O.study(args.study)
+            st["candidates"] = [O.candidate(c) for c in st["candidates"]]
+            _out(args, st, "\n".join([f"study {st['id']}: {st['target']['problem']}"] +
+                                     [f"  {c['id']}  {c['status']:<22} {c['title']}" for c in st["candidates"]]))
+    except (OriginalityError, KeyError) as e:
+        print(f"lucid invent: {e}", file=sys.stderr)
+        return 2
+    return 0
+
+
+
+# --------------------------------------------------------------------------- plain
+def cmd_plain(args) -> int:
+    from . import plain
+    if args.file and args.file != "-":
+        with open(args.file, encoding="utf-8") as fh:
+            text = fh.read()
+    else:
+        text = sys.stdin.read()
+    if args.fix:
+        new, info = plain.fix(text)
+        if args.json:
+            _out(args, {"text": new, **info})
+        else:
+            print(new, end="" if new.endswith("\n") else "\n")
+            lost = [k for k, ok in info["preserved"].items() if not ok]
+            if lost:
+                print(f"warning: the fix changed {', '.join(lost)}; check it", file=sys.stderr)
+        return 0
+    rep = plain.check(text, question=args.question)
+    _out(args, rep.as_dict(), plain.render(rep))
+    return 0 if rep.ok or not args.strict else 1
+
+
 def cmd_capabilities(args) -> int:
     from .capabilities import load_matrix
     m = load_matrix()
@@ -591,6 +741,101 @@ def build_parser() -> argparse.ArgumentParser:
     x = common(sub.add_parser("activity"))
     x.add_argument("--limit", type=int, default=50)
 
+    iv = sub.add_parser("invent", help="idea generation and prior-art checks").add_subparsers(dest="action",
+                                                                                            required=True)
+    x = common(iv.add_parser("target", help="start a study: the problem and what counts as better"))
+    x.add_argument("problem")
+    x.add_argument("--users")
+    x.add_argument("--constraint", action="append")
+    x.add_argument("--existing", action="append", help="an existing approach you already know")
+    x.add_argument("--improvement", help="what improvement matters")
+    x.add_argument("--level", default="mechanism", choices=["mechanism", "implementation", "application",
+                                                            "combination"])
+    x.add_argument("--confidential", action="append", help="term never sent to external search")
+    x.add_argument("--allow", action="append", help="search provider allowed (default local:reference)")
+    x.add_argument("--require", action="append", help="provider that must run before any originality claim")
+    x.add_argument("--ledger")
+    x = common(iv.add_parser("candidate", help="add a candidate idea"))
+    x.add_argument("study")
+    x.add_argument("--title", required=True)
+    x.add_argument("--mechanism", required=True, help="how it works")
+    x.add_argument("--difference", help="what is specifically different")
+    x.add_argument("--method", required=True, choices=["challenge_assumption", "combine_fields", "change_constraint",
+                                                      "reverse_process", "remove_dependency", "new_method"])
+    x.add_argument("--advantage")
+    x.add_argument("--component", action="append")
+    x.add_argument("--domain")
+    x.add_argument("--revisit-of")
+    x.add_argument("--revisit-reason")
+    x = common(iv.add_parser("check", help="check Lucid's records, search, and assess"))
+    x.add_argument("id")
+    x.add_argument("--no-local", action="store_true", help="skip the bundled reference collection")
+    x.add_argument("--collection", help="path to a JSON-lines reference collection")
+    x.add_argument("--offline", action="append", help="record a provider as unavailable for this run")
+    x = common(iv.add_parser("not-a-repeat", help="record that a close earlier record is a different idea"))
+    x.add_argument("id")
+    x.add_argument("match")
+    x.add_argument("--reason", required=True)
+    x = common(iv.add_parser("plan", help="show the planned search queries"))
+    x.add_argument("id")
+    x = common(iv.add_parser("search-log", help="record a search you ran yourself (including failures)"))
+    x.add_argument("id")
+    x.add_argument("--provider", required=True)
+    x.add_argument("--query", required=True)
+    x.add_argument("--kind", required=True, choices=["problem", "mechanism", "synonym", "adjacent", "component",
+                                                    "combination"])
+    x.add_argument("--status", required=True, choices=["ran", "unavailable", "not_authorized",
+                                                      "skipped_confidential"])
+    x.add_argument("--results", type=int, default=0)
+    x.add_argument("--covers", help="comma list: papers,docs,products,repos,standards,patents,web")
+    x.add_argument("--note")
+    x = common(iv.add_parser("add-source", help="record a source you found"))
+    x.add_argument("id")
+    x.add_argument("--provider", required=True)
+    x.add_argument("--kind", required=True, choices=["papers", "docs", "products", "repos", "standards", "patents",
+                                                    "web"])
+    x.add_argument("--ref", required=True)
+    x.add_argument("--title", required=True)
+    x.add_argument("--summary", required=True)
+    x.add_argument("--inspected", action="store_true", help="you read the source itself, not just a snippet")
+    x.add_argument("--relation", choices=["equivalent", "adaptation", "different", "unclear"])
+    x.add_argument("--differences")
+    x.add_argument("--found-by")
+    x = common(iv.add_parser("inspect", help="mark a source as read and say how it relates"))
+    x.add_argument("id")
+    x.add_argument("--relation", choices=["equivalent", "adaptation", "different", "unclear"])
+    x.add_argument("--differences")
+    x = common(iv.add_parser("assess", help="recompute status, or record one role's independent verdict"))
+    x.add_argument("id")
+    x.add_argument("--role", choices=["ideation", "prior_art", "skeptic"])
+    x.add_argument("--verdict")
+    x.add_argument("--rationale")
+    x.add_argument("--saw-others", action="store_true")
+    x = common(iv.add_parser("value", help="test whether the idea works (separate from novelty)"))
+    x.add_argument("id")
+    x.add_argument("--check", action="append", help="NAME=COMMAND; exit 0 means passed")
+    x.add_argument("--feasibility")
+    x.add_argument("--usefulness")
+    x.add_argument("--resources")
+    x.add_argument("--advantage-evidence")
+    x = common(iv.add_parser("gate", help="keep only ideas that look original within the searched scope"))
+    x.add_argument("study")
+    x.add_argument("--include-incremental", action="store_true")
+    x = common(iv.add_parser("record", help="invention record"))
+    x.add_argument("id")
+    x.add_argument("--markdown", action="store_true")
+    x.add_argument("--save", action="store_true", help="store it as an 'invention' memory")
+    x = common(iv.add_parser("workers", help="delegation plan for ideation, prior-art and skeptic workers"))
+    x.add_argument("study")
+    x = common(iv.add_parser("show"))
+    x.add_argument("study")
+    pl = sub.add_parser("plain", help="plain-language check for a reply or message").add_subparsers(
+        dest="action", required=True)
+    x = common(pl.add_parser("check", help="flag stiff, wordy or unclear wording (reads a file or stdin)"))
+    x.add_argument("file", nargs="?", default="-")
+    x.add_argument("--question", help="the question being answered, to judge length")
+    x.add_argument("--fix", action="store_true", help="apply only the safe phrase swaps and print the result")
+    x.add_argument("--strict", action="store_true", help="exit 1 if anything is flagged")
     x = common(sub.add_parser("capabilities", help="host capability matrix"))
     x.add_argument("--host")
     sy = sub.add_parser("sync").add_subparsers(dest="action", required=True)
@@ -608,7 +853,7 @@ def build_parser() -> argparse.ArgumentParser:
 DISPATCH = {"memory": cmd_memory, "import": cmd_import, "conv": cmd_conv, "handoff": cmd_handoff,
             "share": cmd_share, "task": cmd_task, "budget": cmd_budget, "decide": cmd_decide,
             "monitor": cmd_monitor, "capabilities": cmd_capabilities, "sync": cmd_sync, "serve": cmd_serve,
-            "mcp": cmd_mcp, "eval": cmd_eval}
+            "mcp": cmd_mcp, "eval": cmd_eval, "invent": cmd_invent, "plain": cmd_plain}
 
 
 def main(argv: list[str] | None = None) -> int:

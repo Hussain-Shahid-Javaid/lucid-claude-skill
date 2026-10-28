@@ -42,11 +42,11 @@ def ingest_capture(L, body: dict, *, user: str) -> dict:
     if ext.get("ok") is False:
         L.store.log("extension", "capture.extraction_failed", "site", site, {"errors": ext.get("errors", [])[:5],
                                                                              "adapter": body.get("adapter")})
-        raise CaptureRejected(f"site adapter reported extraction failure: {ext.get('errors')}")
+        raise CaptureRejected(f"couldn't read the conversation on this page: {ext.get('errors')}")
     approx = len(str(body.get("text", ""))) + sum(len(str(m.get("content", "")))
                                                   for m in (body.get("conversation") or {}).get("messages", []))
     if approx > MAX_BYTES:
-        raise CaptureRejected("capture too large")
+        raise CaptureRejected("this page is too large to capture")
     kind = body.get("kind", "selection")
     sc = Scope(user, body.get("project") or "")
     if kind in ("selection", "page"):

@@ -1,10 +1,10 @@
 ---
 name: lucid
-description: Persistent, provenance-tracked memory and working discipline for AI assistants. Use when the user asks to remember, recall, correct or forget something; when resuming or handing work between sessions or tools; when a task needs explicit acceptance checks, a token/cost budget, parallel workers, timed default decisions, or verify-and-correct cycles; or when investigating an unfamiliar or possibly unsolved problem.
+description: Persistent, provenance-tracked memory and working discipline for AI assistants. Use when the user asks to remember, recall, correct or forget something; when resuming or handing work between sessions or tools; when a task needs explicit acceptance checks, a token/cost budget, parallel workers, timed default decisions, or verify-and-correct cycles; when investigating an unfamiliar or possibly unsolved problem; or when the user wants new or original ideas checked against existing work. Also sets how replies are written, in plain and direct language.
 license: MIT
 compatibility: Needs Python 3.10+ and a writable home directory for persistent storage (default ~/.lucid). Works offline with no API keys. Script execution required; hosts without scripts can use the optional MCP server instead.
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   homepage: "https://github.com/Hussain-Shahid-Javaid/lucid-claude-skill"
 ---
 
@@ -33,6 +33,26 @@ Set `LUCID_PROJECT=<name>` (or pass `--project`) to keep project memories separa
    Lucid redacts common secret formats but that is a safety net, not permission.
 5. **Don't overclaim.** Report task status exactly (`completed` only when acceptance checks passed).
    Say "not found in my search" rather than "this is novel". Finite tests are not proofs.
+
+## How to write every reply
+
+Write like a knowledgeable colleague. This applies to answers, progress updates, questions, error
+messages and anything shown in the dashboard.
+
+- Put the answer first. Answer simple questions briefly.
+- Use familiar words and direct sentences. Explain a technical term the first time if the reader may not know it.
+- No canned openers or closers, no praise, no corporate language, no repeated summary at the end.
+- Use headings, lists and tables only when they make the answer easier to use.
+- Keep every fact, number, caveat, piece of code and technical distinction. Simpler wording must not
+  change what is true, and never invent experiences.
+- If the user asks for a style (formal, terse, detailed), follow it.
+
+Before sending, check quickly, without an extra model call: Is the main point clear at the start? Will
+this reader understand it? Can words be cut? Does it sound natural read aloud? Are the facts and the
+uncertainty still accurate? `lucid.py plain check <file>` (or stdin) flags stiff phrases, filler, long
+sentences and unexplained acronyms; `--fix` applies only safe word swaps and never touches code,
+numbers or hedges. Example: "It is recommended that you initiate an application restart subsequent to
+saving your modifications." becomes "Save your changes, then restart the app."
 
 ## Session start (when prior context could matter)
 
@@ -108,6 +128,33 @@ Use `references/research.md`: separate missing information vs. new combinations 
 search primary sources (record coverage and date), try materially different approaches, design small
 discriminating experiments, protect held-out evaluation, and report with the restricted labels
 (verified within bounds / empirically supported / unverified candidate / disproven / unresolved / budget exhausted).
+
+## Original ideas and prior-art checks
+
+Assess originality before claiming it, and never promise that an idea is unprecedented.
+Full workflow: `references/originality.md`. In short:
+
+1. **Target.** `invent target "<problem>" --improvement "<what better means>" --level mechanism`
+   (also `--existing`, `--constraint`, `--confidential <term>`, `--allow <provider>`).
+2. **Candidates that differ in substance.** Each needs a mechanism, a specific difference and a method
+   (`challenge_assumption`, `combine_fields`, `change_constraint`, `reverse_process`,
+   `remove_dependency`, `new_method`). Renaming, rephrasing, adding "AI" or combining things with no
+   stated advantage is not novelty; Lucid flags these.
+3. **Check Lucid's records, then search.** `invent check <cand>` compares with earlier proposals
+   (including rejected ones) and memories, then searches the bundled reference collection. If you can
+   search the web, run your own searches by problem, mechanism, synonyms, adjacent fields and
+   components, log every one with `invent search-log` (failures too), record sources with
+   `invent add-source`, and read the closest ones in full before `--inspected --relation ...`.
+   Leave confidential details out of external queries. A failed search is not evidence of absence.
+4. **Status, scoped.** known / adaptation / potentially original within the documented search scope /
+   unresolved / not assessed. Without an authorized search, external originality stays "not assessed".
+   Never turn "no match found" into "nobody has thought of this".
+5. **Value separately.** `invent value <cand> --check NAME=CMD` (feasibility, correctness, advantage).
+6. **Original only?** `invent gate <study>` keeps qualifying ideas, holds back incremental ones, and
+   says plainly when none qualify. `invent record <cand> --markdown` / `--save` writes the record.
+
+For parallel work, `invent workers <study>` gives briefs for ideation, prior-art and skeptic workers.
+They share the budget and must not see each other's verdicts; agreement between them is not evidence.
 
 ## Dashboard, MCP and more
 

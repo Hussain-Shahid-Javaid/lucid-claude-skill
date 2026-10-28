@@ -1,5 +1,10 @@
 # Lucid
 
+<p align="center">
+  <a href="docs/assets/lucid-launch.mp4"><img src="docs/assets/lucid-demo.gif" alt="Lucid in 25 seconds: a forgetful assistant line is struck through, then real Lucid CLI output flags a conflict, the dashboard shows a corrected memory with its revision history, and an eval shows correct answers broken by a noisy reviewer drop from 64% to 0%." width="800"></a>
+  <br><sub>Lucid in 25 seconds. Click for the full-quality MP4. Every screen is real Lucid output.</sub>
+</p>
+
 Lucid is a portable AI **skill** plus a small local toolkit that gives assistants such as Claude Code:
 
 - **Persistent memory with provenance.** Every record keeps its origin, evidence, revisions, conflicts and expiry. Records are scoped per user and per project.
@@ -16,6 +21,21 @@ Lucid is a portable AI **skill** plus a small local toolkit that gives assistant
 Lucid works fully offline with **no API keys**. Normal reasoning stays in your host assistant's model. Saving or recalling memory never calls a paid API.
 
 > **Honest scope.** Lucid does not guarantee accuracy, remove bias, sync native chat history of ChatGPT/Claude.ai/Gemini, bypass provider limits, or create or prove subjective experience. See [docs/status.md](docs/status.md) for exactly what is implemented, tested offline, live-verified, unconfigured, or unsupported.
+
+## How it works
+
+<p align="center">
+  <img src="docs/assets/how-it-works.svg" alt="How Lucid works. Your AI tools (Claude Code via the /lucid skill and CLI, any MCP client, and exports from ChatGPT, Claude.ai or Gemini) talk to the Lucid core, a local SQLite store. The core holds memory with provenance; conflicts, history and tombstones; tasks, budgets and timed decisions; and a conversation archive. Context flows out as handoffs limited to the categories you allow, to a local dashboard, and to optional S3 or Google Docs mirrors. The animation cycles through four steps: save, recall, correct, hand off." width="100%">
+</p>
+
+| Step | What happens | Try it |
+|---|---|---|
+| **1. Save** | The memory is stored with its origin (you, the assistant, a tool, an import) and any evidence. An assistant's guess stays `unverified` until a real source backs it. | `lucid memory add "Prefers pytest" --kind preference --key pref:test-runner` |
+| **2. Recall** | Relevant memories are ranked and packed into a token budget. They are framed as data, not instructions, and each comes with a note on why it matched. | `lucid memory search "which test runner"` |
+| **3. Correct** | A correction supersedes the old value but keeps it in the history. Two statements that disagree are flagged as a conflict instead of the newest one silently winning. Deleted memories stay deleted. | `lucid memory correct <id> "Prefers unittest" --reason "switched"` |
+| **4. Hand off** | Another tool gets a context pack with only the categories you've allowed for it. If that text comes back in a later import, Lucid recognises it as its own and doesn't count it twice. | `lucid handoff prepare --to chatgpt --goal "continue the refactor"` |
+
+Everything above runs locally from the skill's bundled CLI. The dashboard (`lucid serve`) shows the same records with their provenance, revision history, sync queues, budgets and pending questions.
 
 ## Quick start
 

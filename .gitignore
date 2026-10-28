@@ -13,3 +13,4 @@ build/
 .venv/
 skill/lucid/scripts/lib/
 !dist/lucid-skill.zip
+brag-output/

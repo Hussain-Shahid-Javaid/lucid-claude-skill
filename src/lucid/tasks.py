@@ -6,6 +6,8 @@ integration never counts as completion.
 """
 from __future__ import annotations
 
+import builtins
+
 import subprocess
 from typing import Any, Iterable
 
@@ -70,7 +72,7 @@ class Tasks:
     def set_status(self, tid: str, status: str, *, result: Any = None, only_from: Iterable[str] | None = None) -> bool:
         if status not in STATUSES:
             raise ValueError(status)
-        sql = "UPDATE tasks SET status=?, updated_at=?" + (", result=?" if result is not None else "") + " WHERE id=?"
+        sql = "UPDATE tasks SET status=?, updated_at=?" + (", result=?" if result is not None else "") + " WHERE id=?"  # noqa: S608 - placeholders only; column names are internal
         params: list[Any] = [status, self.s.clock.iso()] + ([redact(dumps(result))] if result is not None else []) + [tid]
         if only_from:
             fr = list(only_from)
@@ -106,7 +108,7 @@ class Tasks:
                       (dumps(t["acceptance"]), self.s.clock.iso(), tid))
         return self.get(tid)
 
-    def run_command_check(self, tid: str, check_id: str, cmd: list[str], cwd: str | None = None,
+    def run_command_check(self, tid: str, check_id: str, cmd: builtins.list[str], cwd: str | None = None,
                           timeout: int = 600) -> dict:
         """Executable acceptance check: exit code 0 == passed. Output stored as evidence."""
         try:

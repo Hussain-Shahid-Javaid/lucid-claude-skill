@@ -71,7 +71,7 @@ def brier(pairs: list[tuple[float, int]]) -> float | None:
 
 
 def calibration_stats(pairs: list[tuple[float, int]], bins: int = 5) -> dict[str, Any]:
-    table = []
+    table: list[dict[str, Any]] = []
     for b in range(bins):
         lo, hi = b / bins, (b + 1) / bins
         sel = [(p, o) for p, o in pairs if (lo <= p < hi) or (b == bins - 1 and p == 1.0)]
@@ -80,5 +80,5 @@ def calibration_stats(pairs: list[tuple[float, int]], bins: int = 5) -> dict[str
                           "mean_confidence": round(sum(p for p, _ in sel) / len(sel), 3),
                           "observed_rate": round(sum(o for _, o in sel) / len(sel), 3)})
     ece = sum(t["n"] * abs(t["mean_confidence"] - t["observed_rate"]) for t in table) / len(pairs) if pairs else None
-    return {"n": len(pairs), "brier": None if not pairs else round(brier(pairs), 4),
+    return {"n": len(pairs), "brier": None if not pairs else round(brier(pairs) or 0.0, 4),
             "ece": None if ece is None else round(ece, 4), "bins": table}

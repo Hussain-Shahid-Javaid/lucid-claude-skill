@@ -36,7 +36,7 @@ def redact(text: str) -> str:
     out = text
     for name, pat in PATTERNS:
         if name == "password_assignment":
-            out = pat.sub(lambda m: f"{m.group(1)}{m.group(2)}[REDACTED:{name}]", out)
+            out = pat.sub(lambda m: f"{m.group(1)}{m.group(2)}[REDACTED:{name}]", out)  # noqa: B023 - closure runs before the loop advances
         else:
             out = pat.sub(f"[REDACTED:{name}]", out)
     return out

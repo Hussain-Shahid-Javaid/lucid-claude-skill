@@ -93,7 +93,8 @@ class S3Backend:
         except PermanentError:
             raise  # e.g. NoSuchBucket / AccessDenied must not look like "record absent"
         except Exception as e:
-            code, status = _code(e.__cause__ or e)
+            cause = e.__cause__ if isinstance(e.__cause__, Exception) else e
+            code, status = _code(cause)
             if code in ("NoSuchKey", "404") or (status == 404 and code in ("", "NotFound")):
                 return None
             raise
@@ -109,8 +110,11 @@ class S3Backend:
         try:
             etag = self._put(self._key("manifest.json"), {"schema": SCHEMA, "format": "lucid.s3"}, IfNoneMatch="*")
             return Versioned({"schema": SCHEMA, "format": "lucid.s3"}, etag)
-        except ConflictError:
-            return self._get(self._key("manifest.json"))  # created concurrently
+        except ConflictError:  # created concurrently: read the winner's manifest
+            m = self._get(self._key("manifest.json"))
+            if m is None:
+                raise TransientError("manifest was created concurrently but is not readable yet") from None
+            return m
 
     def append_event(self, op_id: str, event: dict) -> dict:
         key = self._key("events", f"{op_id}.json")

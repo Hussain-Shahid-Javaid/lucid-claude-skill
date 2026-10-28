@@ -175,7 +175,7 @@ def arithmetic_claims_check(candidate: str):
         n += 1
         try:
             val = safe_eval(expr)
-        except Exception:
+        except (ValueError, SyntaxError, ZeroDivisionError, OverflowError):  # not a checkable claim
             continue
         if abs(val - float(m.group(2))) > 1e-9 * max(1, abs(val)):
             bad.append(f"{expr} = {m.group(2)} (actual {val:g})")

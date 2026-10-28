@@ -87,7 +87,7 @@ class Handoffs:
             if t:
                 task = {**dict(t), "acceptance": loads(t["acceptance"], []), "checkpoint": loads(t["checkpoint"], {})}
         questions = [dict(r) for r in self.s.q(
-            "SELECT id, decision, default_option, deadline FROM questions WHERE status='open'"
+            "SELECT id, decision, default_option, deadline FROM questions WHERE status='open'"  # noqa: S608 - placeholders only; column names are internal
             + (" AND task_id=?" if task_id else ""), (task_id,) if task_id else ())]
         conflicts = [m["id"] for m in res.items if m.get("open_conflicts")]
         payload: dict[str, Any] = {

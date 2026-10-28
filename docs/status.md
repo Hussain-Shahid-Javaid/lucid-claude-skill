@@ -1,4 +1,4 @@
-# Implementation status (2026-10-28, v0.2.0)
+# Implementation status (2026-10-28, v0.3.0)
 
 Legend:
 - **Implemented:** the code exists.
@@ -41,6 +41,9 @@ Legend:
 | Originality checking and prior-art workflow | implemented, tested offline | `tests/test_originality.py` covers every case in the spec. Lucid **cannot browse**: web searches are the host's own, logged through the CLI. The bundled reference collection has 14 entries; the concept thesaurus has 44 concepts. Held-out probes: 0/13 false originality claims, but 5/8 known equivalents detected (keyword baseline: 7/8). |
 | Originality: parallel ideation / prior-art / skeptic workers | implemented, tested offline (deterministic workers) | shared budget ledger; independent assessments stored. Host-native subagents get a delegation plan (`invent workers`) and are not driven by Lucid. |
 | Plain-language replies | rules in SKILL.md; checker implemented, tested offline | The checker is heuristic. Whether a live model follows the rules in a Claude Code session has **not been measured**. |
+| Quality plans and release gates | implemented, tested offline | Evidence is bound to file hashes, weakened tests are detected, reviews must be concrete, and defects are tracked by severity (`tests/test_quality.py`). Lucid's own release plan is `quality.json`; from v0.3.0 on, each release's gate report is attached to its GitHub release. |
+| Email / Slack / Teams messaging | implemented, tested against fakes; **not live-verified** | Request shapes follow the official docs (`docs/team-integrations.md`). OAuth sign-in is not bundled. Slack drafts, Teams bot identity and Teams edit/delete are **unsupported**. |
+| Avatar representative | implemented; **simulated** sessions and a **local WebRTC demo** tested | No avatar vendor or meeting platform is integrated. Slack huddles have no API for apps. Teams meeting bots need a separate .NET/Windows media bot. |
 | MCP tools for originality and plain-language checks | **not implemented** | CLI only in v0.2.0 |
 | Consciousness-related experiments | run (functional, simulated) | GW-1, HO-1, with bounded claims; `ActivationProbe` needs real open-weight access |
 

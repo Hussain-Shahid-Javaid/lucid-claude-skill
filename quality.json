@@ -1,0 +1,34 @@
+{
+  "subject": "Lucid release",
+  "profile": "release",
+  "scope": [".", "!reports/quality-gate.md", "!reports/quality-gate.json"],
+  "criteria": [
+    {"category": "correctness", "text": "Every automated test passes on the release files"},
+    {"category": "completeness", "text": "Every feature in the changelog has tests and docs"},
+    {"category": "maintainability", "text": "Lint and type checks pass with the project configuration"},
+    {"category": "usability_accessibility", "text": "Dashboard end-to-end tests pass (loading, empty, error, unauthorised states)"},
+    {"category": "security_privacy", "text": "No secrets in the repository; no known vulnerable runtime dependencies; security lint passes"},
+    {"category": "communication", "text": "Docs agree with the code: one version, working links, correct test count, plain language"},
+    {"category": "conventions", "text": "Skill package validates and builds reproducibly"},
+    {"category": "performance", "text": "Memory search stays fast on 2,000 memories", "mandatory": false}
+  ],
+  "limitations": [
+    "Live-provider tests (S3, Google Docs, Slack, Gmail, Microsoft Graph, avatar vendors) are not part of this gate; they need credentials.",
+    "The extension is tested on saved page fixtures, not in a live browser session on the real sites."
+  ],
+  "checks": [
+    {"key": "lint", "kind": "lint", "description": "ruff: syntax, pyflakes, bugbear and security rules", "command": ["ruff", "check", "src", "tests", "tools"], "inputs": ["src", "tests", "tools", "pyproject.toml"]},
+    {"key": "typecheck-py", "kind": "typecheck", "description": "mypy on the package", "command": ["mypy"], "inputs": ["src", "pyproject.toml"]},
+    {"key": "typecheck-ts", "kind": "typecheck", "description": "TypeScript check of the dashboard", "command": ["npm", "--prefix", "dashboard", "run", "typecheck"], "inputs": ["dashboard/src", "dashboard/tsconfig.json", "dashboard/package.json"]},
+    {"key": "unit", "kind": "unit", "description": "unit tests", "command": ["python3", "-m", "pytest", "-q", "-m", "not live", "tests", "--ignore=tests/test_storage.py", "--ignore=tests/test_mcp_cli.py", "--ignore=tests/test_service.py", "--ignore=tests/test_handoff_sync.py", "--ignore=tests/test_connectors.py", "--ignore=tests/test_skill_and_research.py", "--ignore=tests/test_dashboard_e2e.py", "--ignore=tests/test_extension.py", "--ignore=tests/test_comms.py", "--ignore=tests/test_avatar_demo.py"], "inputs": ["src", "tests", "evals", "pyproject.toml"], "guards": ["tests"]},
+    {"key": "integration", "kind": "integration", "description": "storage contracts, MCP, CLI, service, sync, connectors, skill install, messaging adapters", "command": ["python3", "-m", "pytest", "-q", "-m", "not live", "tests/test_storage.py", "tests/test_mcp_cli.py", "tests/test_service.py", "tests/test_handoff_sync.py", "tests/test_connectors.py", "tests/test_skill_and_research.py", "tests/test_comms.py"], "inputs": ["src", "tests", "skill", "tools", "pyproject.toml"], "guards": ["tests"]},
+    {"key": "e2e", "kind": "e2e", "description": "Playwright: dashboard, extension, avatar WebRTC demo", "command": ["python3", "-m", "pytest", "-q", "tests/test_dashboard_e2e.py", "tests/test_extension.py", "tests/test_avatar_demo.py"], "inputs": ["src", "tests", "extension", "dashboard/src"], "guards": ["tests"]},
+    {"key": "security-lint", "kind": "security", "description": "ruff security rules (bandit set) on source; S603 (argument-list subprocess) and S311 (seeded simulation random) are reviewed exceptions documented in pyproject.toml", "command": ["ruff", "check", "--select", "S", "--ignore", "S603,S311", "src", "tools"], "inputs": ["src", "tools", "pyproject.toml"]},
+    {"key": "secret-scan", "kind": "security", "description": "no credentials in tracked files", "command": ["python3", "tools/secret_scan.py"], "inputs": ["."]},
+    {"key": "dependency-audit", "kind": "dependency", "description": "pip-audit on runtime extras, npm audit on dashboard", "command": ["python3", "tools/dep_audit.py"], "inputs": ["pyproject.toml", "dashboard/package.json", "dashboard/package-lock.json"]},
+    {"key": "build-skill", "kind": "build", "description": "validate and build the skill zip reproducibly", "command": ["python3", "tools/build_skill.py"], "inputs": ["src", "skill", "tools"]},
+    {"key": "build-dashboard", "kind": "build", "description": "dashboard production build", "command": ["npm", "--prefix", "dashboard", "run", "build"], "inputs": ["dashboard/src", "dashboard/package.json"]},
+    {"key": "docs", "kind": "docs", "description": "versions, links, test count, plain language", "command": ["python3", "tools/check_docs.py"], "inputs": ["."]},
+    {"key": "bench", "kind": "performance", "description": "memory search p95 under 100 ms (this machine)", "mandatory": false, "command": ["python3", "tools/bench_memory.py"], "inputs": ["src/lucid/memory.py", "src/lucid/db.py", "tools/bench_memory.py"], "metric": {"regex": "p95_ms=([\\d.]+)", "op": "<=", "threshold": 100, "unit": " ms"}}
+  ]
+}

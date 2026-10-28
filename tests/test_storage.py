@@ -184,7 +184,7 @@ def test_review_regressions_storage(L, s3, tmp_path, clock):
     mirror.sync()
     fresh = Lucid(str(tmp_path / "r.db"), clock)
     rebuild_from_s3(fresh, b)
-    assert [m["content"] for m in fresh.memory.list(P)] == ["new fact"]  # superseded stays superseded
+    assert [(m["id"], m["content"]) for m in fresh.memory.list(P)] == [(new["id"], "new fact")]  # superseded stays superseded
     gone = L.memory.add("delete me please", kind="fact", scope=P)
     mirror.sync()
     L.memory.delete(gone["id"])

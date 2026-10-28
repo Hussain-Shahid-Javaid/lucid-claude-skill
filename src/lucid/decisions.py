@@ -18,6 +18,11 @@ Safety rules enforced in code:
 """
 from __future__ import annotations
 
+import builtins
+import functools
+
+import logging
+
 import datetime as _dt
 import threading
 from typing import Any, Callable, Iterable
@@ -138,7 +143,7 @@ class Decisions:
 
     # ---------------------------------------------------------- questions
     def default_timeout(self) -> float:
-        return float(self.s.get_setting("decision_timeout_s", str(DEFAULT_TIMEOUT_S)))
+        return float(self.s.get_setting("decision_timeout_s") or DEFAULT_TIMEOUT_S)
 
     def ask(self, decision: str, options: list[str], *, category: str, default: str | None = None,
             timeout_s: float | None = None, task_id: str | None = None, scope: str | None = None,
@@ -190,7 +195,7 @@ class Decisions:
         return d
 
     def list(self, status: str | None = None) -> list[dict]:
-        sql = "SELECT id FROM questions" + (" WHERE status=?" if status else "") + " ORDER BY created_at DESC"
+        sql = "SELECT id FROM questions" + (" WHERE status=?" if status else "") + " ORDER BY created_at DESC"  # noqa: S608 - placeholders only; column names are internal
         out = []
         for r in self.s.q(sql, (status,) if status else ()):
             q = self.get(r[0])
@@ -265,7 +270,7 @@ class Decisions:
                          " task_id=? AND status IN ('open','paused')", (self.s.clock.iso(), task_id)).rowcount
 
     # ---------------------------------------------------------- timer
-    def tick(self) -> list[dict]:
+    def tick(self) -> builtins.list[dict]:
         """Resolve every expired open question. Safe to call repeatedly and after restarts."""
         now = self.s.clock.iso()
         out = []
@@ -278,7 +283,7 @@ class Decisions:
             if hook and (st is None or st.get("state") == "failed"):
                 q = self.get(r["id"])
                 try:
-                    _, effect = self.actions.run_once(f"default:{q['id']}", lambda q=q: hook(q))
+                    _, effect = self.actions.run_once(f"default:{q['id']}", functools.partial(hook, q))
                     out.append({"id": q["id"], "status": "defaulted", "recovered": True, "effect": effect})
                 except Exception as e:  # stays failed; visible in activity
                     self.s.log("lucid", "question.default_failed", "question", q["id"], {"error": str(e)})
@@ -294,7 +299,7 @@ class Decisions:
                     effect = None
                     if hook:
                         try:
-                            _, effect = self.actions.run_once(f"default:{q['id']}", lambda q=q: hook(q))
+                            _, effect = self.actions.run_once(f"default:{q['id']}", functools.partial(hook, q))
                         except Exception as e:  # retried on a later tick
                             effect = {"error": str(e)}
                             self.s.log("lucid", "question.default_failed", "question", q["id"], {"error": str(e)})
@@ -334,8 +339,8 @@ class DecisionScheduler(threading.Thread):
                 break
             try:
                 self.d.tick()
-            except Exception:  # keep the timer alive; errors are visible in activity/logs
-                pass
+            except Exception:  # keep the timer alive, but never hide the error
+                logging.getLogger("lucid.decisions").exception("decision tick failed")
 
     def stop(self) -> None:
         self._stop.set()

@@ -9,8 +9,18 @@ jobs:
         with: { python-version: "3.12" }
       - uses: actions/setup-node@v4
         with: { node-version: "22" }
-      - run: pip install -e ".[dev]" pyyaml playwright
+      - run: pip install -e ".[dev]" pyyaml
       - run: python -m playwright install --with-deps chromium
-      - run: cd dashboard && npm ci && npm run build
+      - run: cd dashboard && npm ci && npm run typecheck && npm run build
+      - name: lint (bugbear + security rules)
+        run: ruff check src tests tools
+      - name: type check
+        run: mypy
+      - name: secret scan
+        run: python tools/secret_scan.py
+      - name: dependency audit
+        run: python tools/dep_audit.py
       - run: python tools/build_skill.py
+      - name: docs consistency
+        run: python tools/check_docs.py
       - run: pytest

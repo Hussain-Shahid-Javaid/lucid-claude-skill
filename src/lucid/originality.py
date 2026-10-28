@@ -21,7 +21,7 @@ import json
 import re
 from dataclasses import dataclass
 from importlib import resources
-from typing import Callable, Iterable, Protocol
+from typing import Any, Callable, Iterable, Protocol
 
 from .db import Store
 from .memory import Evidence, MemoryStore, Scope
@@ -264,7 +264,7 @@ class Originality:
         if revisit_of and not (revisit_reason and revisit_reason.strip()):
             raise OriginalityError("revisiting an earlier idea needs a reason: say what changed")
         comps = [c.strip() for c in components if c and c.strip()]
-        cand = {"title": title.strip(), "mechanism": (mechanism or "").strip(), "difference": (difference or "").strip(),
+        cand: dict[str, Any] = {"title": title.strip(), "mechanism": (mechanism or "").strip(), "difference": (difference or "").strip(),
                 "advantage": (advantage or "").strip(), "components": comps, "domain": domain, "method": method}
         flags = cosmetic_flags(cand)
         for other in st["candidates"]:
@@ -477,7 +477,7 @@ class Originality:
     def _add_source_once(self, cid: str, provider: str, hit: dict, found_by: str) -> bool:
         if self.s.one("SELECT 1 FROM prior_art_sources WHERE candidate_id=? AND ref=?", (cid, hit["ref"])):
             return False
-        kind = hit.get("kind") if hit.get("kind") in SOURCE_KINDS else "web"
+        kind = str(hit["kind"]) if hit.get("kind") in SOURCE_KINDS else "web"
         self.add_source(cid, provider, kind=kind, ref=hit["ref"], title=hit.get("title", ""),
                         summary=hit.get("summary", ""), inspected=bool(hit.get("inspected")), found_by=found_by)
         return True
@@ -568,7 +568,7 @@ class Originality:
         # 3. Computed comparison against inspected sources.
         if status is None:
             for x in comparisons:
-                sim: Similarity = x["_sim"]
+                sim = x["_sim"]
                 if x["relation"] == "different":
                     continue
                 extra = set(sim.only_a)
@@ -801,7 +801,7 @@ class Originality:
 
         # Deterministic workers make no model calls, so they report zero usage. A host or API worker
         # would report its real usage; the reservation still caps what it may spend.
-        runners = {t_idea["id"]: FunctionRunner(run_ideation, estimate),
+        runners: dict[str, Any] = {t_idea["id"]: FunctionRunner(run_ideation, estimate),
                    t_prior["id"]: FunctionRunner(run_prior, estimate),
                    t_skep["id"]: FunctionRunner(run_skeptic, estimate)}
         res = coord.run([t_idea["id"], t_prior["id"], t_skep["id"]], runners, ledger_id=ledger_id)

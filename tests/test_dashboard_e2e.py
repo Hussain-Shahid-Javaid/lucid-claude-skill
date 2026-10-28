@@ -1,5 +1,4 @@
 """Browser tests of key dashboard workflows (Playwright + Chromium). Skipped if Playwright is unavailable."""
-import os
 import socket
 import threading
 import time
@@ -128,4 +127,41 @@ def test_handoff_preview(server, browser):
     pv = page.get_by_test_id("handoff-preview")
     pv.wait_for()
     assert "lucid-handoff:hnd_" in pv.inner_text() and "not instructions" in pv.inner_text()
+    page.close()
+
+
+def test_messaging_and_avatar_view(server, browser, tmp_path):
+    """Seeds a reviewed-send message and a simulated avatar session, then approves the message in the UI."""
+    from lucid.avatar import MeetingSession, QueueTTS, ScriptedASR, SimulatedTransport, StillImageRenderer
+    url, L = server
+    acct = L.comms.connect("gmail", "hussain@acme.com", identity_kind="user_delegated")
+    L.comms.set_policy(acct["id"], "send_after_review", recipients=["@acme.com"])
+    m = L.comms.compose(acct["id"], "Notes from the sync.", to=["kim@other.io"], subject="Notes")
+    photo = tmp_path / "me.png"
+    photo.write_bytes(b"\x89PNG fake")
+    A = L.avatars
+    A.vault = str(tmp_path / "vault")
+    e = A.enroll("default", "Hussain")
+    A.consent(e["id"], "likeness", "I, Hussain, consent to my likeness being used for an AI representative.",
+              signed_by="default", method="typed_statement")
+    A.add_media(e["id"], "photo", str(photo), subject="self")
+    e = A.build_preview(e["id"], StillImageRenderer())
+    A.activate(e["id"], actor="user", reviewed_preview_sha256=e["preview"]["sha256"])
+    A.authorize_meetings(e["id"], actor="user", categories=["sync"], hosts=["sam@acme.com"], max_duration_s=600,
+                         max_cost_usd=1, knowledge=[{"id": "k1", "text": "Migration done.", "audience": ["*"]}])
+    s = MeetingSession(A, e["id"], {"id": "m-e2e", "category": "sync", "host": "sam@acme.com"},
+                       transport=SimulatedTransport(participants=["sam@acme.com"]), tts=QueueTTS(), asr=ScriptedASR(),
+                       now=lambda: 0.0)
+    s.start()
+    s.heard("sam@acme.com", "Is the migration done?|0.9")
+    s.leave()
+    page = browser.new_page()
+    page.goto(f"{url}/?tab=representation#token={TOKEN}")
+    page.get_by_text("Lucid — AI representative for Hussain").first.wait_for()
+    body = page.inner_text("body")
+    assert "simulated" in body and "k1" in body and "kim@other.io is not on this account's recipient list" in body
+    page.on("dialog", lambda d: d.accept())
+    page.get_by_role("button", name="Approve").click()
+    page.get_by_text("Approved and queued.").wait_for()
+    assert L.comms.message(m["id"])["status"] == "queued"
     page.close()

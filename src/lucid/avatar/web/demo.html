@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lucid avatar demo</title>
+<style>
+  :root { --bg: #0e1117; --panel: #1a1e26; --ink: #e6e9ef; --muted: #9aa3b2; --acc: #8ea2ff; --warn: #f0b75a; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--ink); font: 16px/1.5 system-ui, sans-serif; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .note { color: var(--muted); font-size: 14px; margin: 0 0 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid #2a303b; border-radius: 10px; padding: 12px; }
+  .card h2 { font-size: 15px; margin: 0 0 8px; color: var(--muted); font-weight: 600; }
+  video, canvas { width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 6px; display: block; }
+  .banner { margin-top: 8px; padding: 8px 10px; border-radius: 6px; background: #2b2410; color: var(--warn); min-height: 1.5em; }
+  .caption { margin-top: 6px; min-height: 1.5em; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+  button { background: var(--acc); color: #0e1117; border: 0; border-radius: 6px; padding: 8px 12px; font-weight: 600; cursor: pointer; }
+  button.secondary { background: #2a303b; color: var(--ink); }
+  button:disabled { opacity: .5; cursor: default; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0; font-size: 14px; }
+  dt { color: var(--muted); }
+</style>
+</head>
+<body>
+<h1>Lucid avatar: controlled WebRTC demonstration</h1>
+<p class="note">Everything runs in this one browser tab over a local loopback connection. This is not a Zoom, Teams, Meet or Slack
+  integration, and the picture is a labelled card, not a lip-synced avatar.</p>
+<div class="row" role="toolbar" aria-label="Lucid controls">
+  <button id="start">Start</button>
+  <button id="speak" disabled>Answer a question</button>
+  <button id="stop" class="secondary" disabled>Stop speaking</button>
+  <button id="takeover" class="secondary" disabled>Take over</button>
+  <button id="late" class="secondary" disabled>Add a late participant</button>
+  <button id="leave" class="secondary" disabled>Leave</button>
+</div>
+<div class="grid">
+  <section class="card" aria-label="Lucid side">
+    <h2>What Lucid sends</h2>
+    <canvas id="avatar" width="640" height="360" aria-label="Lucid's video card"></canvas>
+    <dl>
+      <dt>State</dt><dd id="state">idle</dd>
+      <dt>Shown as</dt><dd id="identity"></dd>
+      <dt>Mode</dt><dd id="mode">AI</dd>
+      <dt>Recording</dt><dd id="recording">off</dd>
+    </dl>
+  </section>
+  <section class="card" aria-label="Participant view">
+    <h2>What a participant sees</h2>
+    <video id="remote" autoplay playsinline muted></video>
+    <div class="banner" id="disclosure" role="status"></div>
+    <div class="caption" id="caption" aria-live="polite"></div>
+  </section>
+  <section class="card" aria-label="Late participant view">
+    <h2>A participant who joins later</h2>
+    <video id="remote2" autoplay playsinline muted></video>
+    <div class="banner" id="late-disclosure" role="status"></div>
+    <div class="caption" id="caption2" aria-live="polite"></div>
+  </section>
+</div>
+<script>
+(() => {
+  const name = new URLSearchParams(location.search).get("name") || "the user";
+  const identity = `Lucid — AI representative for ${name}`;
+  const disclosure = `Hello, I'm Lucid, an AI representative for ${name}. ${name} is not here in person.`;
+  const $ = (id) => document.getElementById(id);
+  const log = (window.demoLog = []);
+  $("identity").textContent = identity;
+
+  const canvas = $("avatar");
+  const ctx = canvas.getContext("2d");
+  let speaking = false, mode = "AI", frame = 0;
+  function draw() {
+    frame++;
+    ctx.fillStyle = "#0e1117"; ctx.fillRect(0, 0, 640, 360);
+    const r = 70 + (speaking ? 8 * Math.abs(Math.sin(frame / 4)) : 0);
+    ctx.fillStyle = mode === "AI" ? "#8ea2ff" : "#6fd29b";
+    ctx.beginPath(); ctx.arc(320, 150, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#8ea2ff"; ctx.fillRect(0, 300, 640, 60);
+    ctx.fillStyle = "#0e1117"; ctx.font = "bold 22px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText(mode === "AI" ? identity : `${name} has taken over`, 320, 338);
+    requestAnimationFrame(draw);
+  }
+  draw();
+
+  const audio = new (window.AudioContext || window.webkitAudioContext)();
+  const osc = audio.createOscillator(); const gain = audio.createGain(); gain.gain.value = 0;
+  const dest = audio.createMediaStreamDestination();
+  osc.frequency.value = 180; osc.connect(gain); gain.connect(dest); osc.start();
+  const stream = new MediaStream([...canvas.captureStream(15).getVideoTracks(), ...dest.stream.getAudioTracks()]);
+
+  const lucidSide = []; // [{pc, channel, viewer}]
+  async function connect(viewer, bannerEl, captionEl) {
+    const a = new RTCPeerConnection(); const b = new RTCPeerConnection();
+    a.onicecandidate = (e) => e.candidate && b.addIceCandidate(e.candidate);
+    b.onicecandidate = (e) => e.candidate && a.addIceCandidate(e.candidate);
+    stream.getTracks().forEach((t) => a.addTrack(t, stream));
+    const ch = a.createDataChannel("lucid");
+    ch.onopen = () => { send(ch, { type: "identity", text: identity }); send(ch, { type: "disclosure", text: disclosure }); };
+    b.ondatachannel = (e) => {
+      e.channel.onmessage = (m) => {
+        const msg = JSON.parse(m.data); log.push({ viewer, ...msg });
+        if (msg.type === "disclosure") bannerEl.textContent = msg.text;
+        if (msg.type === "caption") captionEl.textContent = msg.text;
+        if (msg.type === "speaking" && !msg.on) captionEl.dataset.stopped = "1";
+        if (msg.type === "leave") bannerEl.textContent = `${identity} left the meeting.`;
+      };
+    };
+    b.ontrack = (e) => { $(viewer).srcObject = e.streams[0]; };
+    const offer = await a.createOffer(); await a.setLocalDescription(offer); await b.setRemoteDescription(offer);
+    const answer = await b.createAnswer(); await b.setLocalDescription(answer); await a.setRemoteDescription(answer);
+    lucidSide.push({ a, b, ch, viewer });
+    return { a, b, ch };
+  }
+  function send(ch, msg) { if (ch.readyState === "open") ch.send(JSON.stringify(msg)); }
+  const broadcast = (msg) => lucidSide.forEach((s) => send(s.ch, msg));
+
+  let queue = [], timer = null;
+  function stopSpeaking() {
+    queue = []; clearTimeout(timer); timer = null; speaking = false; gain.gain.value = 0;
+    broadcast({ type: "speaking", on: false });
+  }
+  function playNext() {
+    if (!queue.length || mode !== "AI") { stopSpeaking(); return; }
+    speaking = true; gain.gain.value = 0.05;
+    broadcast({ type: "caption", text: queue.shift() });
+    timer = setTimeout(playNext, 700);
+  }
+
+  $("start").onclick = async () => {
+    await audio.resume();
+    $("state").textContent = "connecting";
+    await connect("remote", $("disclosure"), $("caption"));
+    $("state").textContent = "live";
+    ["speak", "stop", "takeover", "late", "leave"].forEach((id) => ($(id).disabled = false));
+    $("start").disabled = true;
+  };
+  $("speak").onclick = () => {
+    queue = ["The storage migration finished on Monday.", "It moved four databases.", "Nothing was lost.",
+             "Backups were checked twice.", `Anything else, ${name} will confirm.`];
+    broadcast({ type: "speaking", on: true });
+    playNext();
+  };
+  $("stop").onclick = stopSpeaking;
+  $("takeover").onclick = () => { stopSpeaking(); mode = "human"; $("mode").textContent = `${name} (human)`;
+    broadcast({ type: "takeover" }); };
+  $("late").onclick = async () => { await connect("remote2", $("late-disclosure"), $("caption2")); $("late").disabled = true; };
+  $("leave").onclick = () => {
+    stopSpeaking(); broadcast({ type: "leave" });
+    setTimeout(() => { lucidSide.forEach((s) => { s.a.close(); s.b.close(); }); $("state").textContent = "left"; }, 100);
+    ["speak", "stop", "takeover", "late", "leave"].forEach((id) => ($(id).disabled = true));
+  };
+  window.demoState = () => ({ speaking, mode, queue: queue.length, peers: lucidSide.map((s) => s.a.connectionState) });
+})();
+</script>
+</body>
+</html>

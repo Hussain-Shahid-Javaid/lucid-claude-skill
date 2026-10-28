@@ -20,7 +20,7 @@ from typing import Any, Iterator
 from ..conversations import NormalizedConversation
 from ..util import dumps, loads
 
-OPERATIONS = {"import", "export", "context_handoff", "native_sync", "capture", "storage"}
+OPERATIONS = {"import", "export", "context_handoff", "native_sync", "capture", "storage", "messaging"}
 
 
 class ManifestError(ValueError):
@@ -92,7 +92,7 @@ class Registry:
         self.register(FolderConnector)
         found = [FolderConnector.manifest.id]
         try:
-            eps = metadata.entry_points(group="lucid.connectors")
+            eps = list(metadata.entry_points(group="lucid.connectors"))
         except TypeError:  # pragma: no cover
             eps = []
         for ep in eps:

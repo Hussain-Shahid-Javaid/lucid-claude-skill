@@ -8,7 +8,7 @@ from conftest import fixture_bytes
 from lucid.conversations import NormalizedConversation, NormalizedMessage
 from lucid.importers import ADAPTERS
 from lucid.importers.archive import UnsafeArchive, open_zip, read_input
-from lucid.memory import Evidence, Scope
+from lucid.memory import Evidence
 
 
 def conv(cid, msgs, provider="t", account="default"):

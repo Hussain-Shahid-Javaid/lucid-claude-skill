@@ -87,7 +87,8 @@ class BudgetLedger:
         limit = led["token_limit"]
         reserve_amt = int(limit * led["reserve_fraction"]) if limit else 0
         committed = used + inflight + unknown
-        elapsed = (self.s.clock.now() - parse_iso(led["started_at"])).total_seconds()
+        started = parse_iso(led["started_at"]) or self.s.clock.now()
+        elapsed = (self.s.clock.now() - started).total_seconds()
         return {
             "ledger_id": lid, "name": led["name"], "mode": led["mode"], "token_limit": limit,
             "used_tokens": used, "inflight_reserved_tokens": inflight, "unknown_held_tokens": unknown,

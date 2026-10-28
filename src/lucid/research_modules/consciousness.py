@@ -58,7 +58,8 @@ def make_problem(rng: random.Random, n_modules: int = 4, keys_per_module: int = 
         kind = "integration"
     else:
         m = rng.randrange(n_modules)
-        q = tuple(rng.sample(list(slices[m]), 2))
+        a_, b_ = rng.sample(list(slices[m]), 2)
+        q = (a_, b_)
         kind = "local"
     answer = sum(next(s[k] for s in slices if k in s) for k in q)
     return Problem(slices, q, answer, kind)
@@ -144,6 +145,8 @@ def run_ho1(experiments, *, seed: int = 11, n: int = 400, threshold: float = 0.6
             answered += 1
             sel_correct += int(majority_correct)
     b_mon, b_without = brier(with_mon), brier(without)
+    if b_mon is None or b_without is None:  # both lists are non-empty here
+        raise RuntimeError("no trials were run")
     status = "empirically_supported" if b_mon < b_without else "disproven"
     return experiments.record(eid, status=status, result={
         "brier_with_monitor": round(b_mon, 4), "brier_without": round(b_without, 4),

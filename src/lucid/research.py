@@ -57,6 +57,6 @@ class Experiments:
         return d
 
     def list(self, module: str | None = None) -> list[dict[str, Any]]:
-        rows = self.s.q("SELECT id FROM experiments" + (" WHERE module=?" if module else "") + " ORDER BY created_at",
+        rows = self.s.q("SELECT id FROM experiments" + (" WHERE module=?" if module else "") + " ORDER BY created_at",  # noqa: S608 - placeholders only; column names are internal
                         (module,) if module else ())
         return [self.get(r[0]) for r in rows]

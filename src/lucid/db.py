@@ -130,7 +130,7 @@ class Store:
 
     def schema_version(self) -> int:
         r = self.one("SELECT MAX(version) FROM schema_migrations")
-        return int(r[0] or 0)
+        return int(r[0] or 0) if r else 0
 
     # -- activity log (observed telemetry only) ---------------------------
     def log(self, actor: str, action: str, entity_type: str | None = None,

@@ -37,7 +37,7 @@ S = {"type": "string"}
 I = {"type": "integer"}
 
 
-def _schema(props: dict, required: list[str] = ()) -> dict:
+def _schema(props: dict, required: tuple[str, ...] | list[str] = ()) -> dict:
     return {"type": "object", "properties": props, "required": list(required), "additionalProperties": False}
 
 
@@ -121,7 +121,7 @@ class LucidMCP:
                 result = {"tools": [{"name": n, "description": d, "inputSchema": s, "annotations": a}
                                     for n, d, s, a in TOOLS]}
             elif method == "tools/call":
-                result = self.call(params.get("name"), params.get("arguments") or {})
+                result = self.call(str(params.get("name") or ""), params.get("arguments") or {})
             else:
                 raise RpcError(-32601, f"method not found: {method}")
             if stateless:
@@ -244,6 +244,7 @@ def serve_stdio(server: LucidMCP, stdin=None, stdout=None) -> None:
         line = line.strip()
         if not line:
             continue
+        resp: dict | None
         try:
             msg = json.loads(line)
         except json.JSONDecodeError:

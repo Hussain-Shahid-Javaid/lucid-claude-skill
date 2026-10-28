@@ -59,9 +59,9 @@ def run_correction(cfg: dict, split: str) -> dict:
         }
     a, b = cfg["primary_comparison"]
     idx = [i for i in range(sp["n"]) if r["no_review"]["final_correct"][i]]
-    d = paired_bootstrap_ci([r[a]["corrupted"][i] for i in idx], [r[b]["corrupted"][i] for i in idx])
-    res["primary_diff"] = {"comparison": f"corruption({b}) - corruption({a})", "mean": round(d[0], 3),
-                           "ci95": [round(d[1], 3), round(d[2], 3)]}
+    ci = paired_bootstrap_ci([r[a]["corrupted"][i] for i in idx], [r[b]["corrupted"][i] for i in idx])
+    res["primary_diff"] = {"comparison": f"corruption({b}) - corruption({a})", "mean": round(ci[0], 3),
+                           "ci95": [round(ci[1], 3), round(ci[2], 3)]}
     return res
 
 

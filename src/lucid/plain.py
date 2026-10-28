@@ -187,7 +187,9 @@ def _case_like(src: str, repl: str) -> str:
 
 def fix(text: str) -> tuple[str, dict]:
     """Apply only the safe phrase swaps, outside code. Returns (new_text, info)."""
-    out, last, changes = [], 0, []
+    out: list[str] = []
+    last = 0
+    changes: list[dict] = []
     for m in _CODE.finditer(text):
         out.append(_fix_prose(text[last:m.start()], changes))
         out.append(m.group(0))

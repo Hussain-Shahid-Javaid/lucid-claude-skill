@@ -72,10 +72,10 @@ def parse(data: bytes, account: str = "default") -> Iterator[NormalizedConversat
         # children are re-parented to the nearest ancestor with a message.
         def visible_parent(node_id):
             seen = set()
-            pid = (mapping.get(node_id) or {}).get("parent")
+            pid = (mapping.get(node_id) or {}).get("parent")  # noqa: B023 - closure runs before the loop advances
             while pid and pid not in seen:
                 seen.add(pid)
-                pnode = mapping.get(pid) or {}
+                pnode = mapping.get(pid) or {}  # noqa: B023 - closure runs before the loop advances
                 if pnode.get("message") and _keep(pnode["message"]):
                     return pid
                 pid = pnode.get("parent")

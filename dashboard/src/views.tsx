@@ -466,3 +466,58 @@ export function Activity() {
     </Section>
   );
 }
+
+// ------------------------------------------------------------------ representation: messaging and avatar
+export function Representation() {
+  const [v, reload] = useApi<Any>("/api/representation");
+  const [msg, setMsg] = useState("");
+  const approve = async (m: Any) => {
+    const flagged = (m.checks?.problems || []).filter((p: Any) => p.severity !== "block").map((p: Any) => p.code);
+    if (flagged.length && !confirm(`Approve despite: ${flagged.join(", ")}?`)) return;
+    try { await post(`/api/comms/${m.id}/approve`, { confirm: flagged, seen_hash: m.content_hash }); setMsg("Approved and queued."); reload(); }
+    catch (e) { setMsg(String(e)); }
+  };
+  return (
+    <View v={v}>{(d) => (<>
+      <Section title="Messaging accounts">
+        <p className="muted">Connecting an account only allows drafts. Sending needs a policy you set.</p>
+        {d.accounts.length === 0 ? <p className="state empty">No email, Slack or Teams accounts connected.</p> : (
+          <table><thead><tr><th>Provider</th><th>Sends as</th><th>Mode</th><th>Status</th><th>Rate limit</th></tr></thead>
+            <tbody>{d.accounts.map((a: Any) => <tr key={a.id}><td>{a.provider}</td><td>{a.identity} ({a.identity_kind})</td>
+              <td>{a.mode}</td><td><Badge kind={statusKind(a.status)}>{a.status}</Badge></td>
+              <td>{a.rules?.rate ? JSON.stringify(a.rules.rate) : "—"}</td></tr>)}</tbody></table>)}
+      </Section>
+      <Section title="Outbox">
+        {msg && <p className="muted" role="status">{msg}</p>}
+        {d.outbox.length === 0 ? <p className="state empty">No messages.</p> : (
+          <table><thead><tr><th>Status</th><th>To</th><th>Message</th><th>Checks</th><th></th></tr></thead>
+            <tbody>{d.outbox.map((m: Any) => <tr key={m.id}>
+              <td><Badge kind={statusKind(m.status)}>{m.status}</Badge></td>
+              <td>{m.kind === "email" ? m.recipients.join(", ") : m.channel}</td>
+              <td>{(m.subject ? m.subject + ": " : "") + m.body.slice(0, 120)}</td>
+              <td>{(m.checks?.problems || []).map((p: Any) => <div key={p.code + p.detail}>{p.detail}</div>)}{m.error && <div>{m.error}</div>}</td>
+              <td>{["pending_review", "escalated"].includes(m.status) && m.mode !== "draft_only" &&
+                <button onClick={() => approve(m)}>Approve</button>}</td></tr>)}</tbody></table>)}
+      </Section>
+      <Section title="Avatar">
+        <p className="muted">Always shown to others as “Lucid — AI representative for you”. Voice needs its own consent.</p>
+        {d.enrollments.length === 0 ? <p className="state empty">No avatar enrolled.</p> : (
+          <table><thead><tr><th>Status</th><th>Appearance</th><th>Voice</th><th>Uses</th><th>Stored</th></tr></thead>
+            <tbody>{d.enrollments.map((e: Any) => <tr key={e.id}><td><Badge kind={statusKind(e.status)}>{e.status}</Badge></td>
+              <td>{e.appearance_enabled ? "on" : "off"}</td><td>{e.voice_enabled ? "on" : "off"}</td>
+              <td>{e.permitted_uses.join(", ") || "—"}</td><td>{e.retention.local}</td></tr>)}</tbody></table>)}
+      </Section>
+      <Section title="Meeting sessions">
+        <p className="muted">{d.note}</p>
+        {d.sessions.length === 0 ? <p className="state empty">No meeting sessions.</p> : (
+          <table><thead><tr><th>Meeting</th><th>Shown as</th><th>State</th><th>Tested as</th><th>Recording</th>
+            <th>Information used</th><th>Escalations</th><th>Costs (USD)</th></tr></thead>
+            <tbody>{d.sessions.map((s: Any) => <tr key={s.id}><td>{s.meeting_id}</td><td>{s.identity}</td>
+              <td><Badge kind={statusKind(s.state)}>{s.state}</Badge>{s.end_reason ? ` (${s.end_reason})` : ""}</td>
+              <td>{s.verification_level}</td><td>{s.recording} / transcript {s.transcription}</td>
+              <td>{s.information_accessed.join(", ") || "none"}</td><td>{s.escalations.length}</td>
+              <td>{Object.entries(s.costs as Record<string, Any>).map(([k, c]) => `${k} ${c.usd}`).join(" · ") || "0"}</td></tr>)}</tbody></table>)}
+      </Section>
+    </>)}</View>
+  );
+}

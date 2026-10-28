@@ -43,9 +43,9 @@ def test_memory_workflow_and_user_isolation(client):
 
 
 def test_secrets_redacted_in_responses(client, L):
-    L.store.log("x", "test", detail={"k": "AKIAABCDEFGHIJKLMNOP"})
+    L.store.log("x", "test", detail={"k": "AKIAEXAMPLEABCDEFGHI"})
     body = client.get("/api/activity", headers=H).text
-    assert "AKIAABCDEFGHIJKLMNOP" not in body
+    assert "AKIAEXAMPLEABCDEFGHI" not in body
 
 
 def test_capture_requires_enabled_site_and_rejects_failed_extraction(client, L):

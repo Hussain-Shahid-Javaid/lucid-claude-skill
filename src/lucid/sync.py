@@ -86,7 +86,7 @@ class Outbox:
     def _finish(self, oid: str, **fields: Any) -> None:
         fields["updated_at"] = self.s.clock.iso()
         sets = ", ".join(f"{k}=?" for k in fields)
-        self.s.ex(f"UPDATE outbox SET {sets} WHERE id=?", [*fields.values(), oid])
+        self.s.ex(f"UPDATE outbox SET {sets} WHERE id=?", [*fields.values(), oid])  # noqa: S608 - placeholders only; column names are internal
 
     def process(self, limit: int = 100) -> dict:
         stats = {"done": 0, "retry": 0, "unknown": 0, "conflict": 0, "dead": 0, "reconciled": 0, "no_destination": 0}

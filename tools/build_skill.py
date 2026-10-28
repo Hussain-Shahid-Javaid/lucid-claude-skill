@@ -27,13 +27,19 @@ def build(zip_out: bool = True) -> str:
         return SKILL
     os.makedirs(os.path.join(ROOT, "dist"), exist_ok=True)
     out = os.path.join(ROOT, "dist", "lucid-skill.zip")
+    # Reproducible zip: sorted entries and a fixed timestamp, so the same sources give the same bytes.
+    entries = []
+    for base, dirs, files in os.walk(SKILL):
+        dirs[:] = sorted(d for d in dirs if d != "__pycache__")
+        entries += [os.path.join(base, f) for f in files if not f.endswith(".pyc")]
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
-        for base, _dirs, files in os.walk(SKILL):
-            for f in files:
-                if f.endswith(".pyc"):
-                    continue
-                p = os.path.join(base, f)
-                z.write(p, os.path.relpath(p, os.path.dirname(SKILL)))
+        for p in sorted(entries):
+            info = zipfile.ZipInfo(os.path.relpath(p, os.path.dirname(SKILL)).replace(os.sep, "/"),
+                                   date_time=(2026, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = (0o755 if os.access(p, os.X_OK) else 0o644) << 16
+            with open(p, "rb") as fh:
+                z.writestr(info, fh.read())
     return out
 
 

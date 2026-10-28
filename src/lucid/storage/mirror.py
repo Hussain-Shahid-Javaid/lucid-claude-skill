@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Iterable
 
 from ..core import Lucid
+from ..memory import MemoryError as LucidMemoryError
 from ..memory import Scope
 from ..util import dumps, sha256
 from .base import ConflictError
@@ -142,7 +143,7 @@ class DocsMirror:
         for mid, text in remote.items():
             try:
                 m = self.L.memory.get(mid, scope=self.scope)  # a doc line cannot touch other scopes
-            except Exception:
+            except LucidMemoryError:  # not found in this scope: the line is ignored
                 continue
             if m["kind"] not in self.categories:
                 continue
@@ -153,7 +154,7 @@ class DocsMirror:
 
     def _get_set(self, key: str) -> set[str]:
         import json
-        return set(json.loads(self.L.store.get_setting(key, "[]")))
+        return set(json.loads(self.L.store.get_setting(key, "[]") or "[]"))
 
     def _put_set(self, key: str, val: set[str]) -> None:
         import json

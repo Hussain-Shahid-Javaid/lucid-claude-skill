@@ -49,7 +49,8 @@ def _tests_pass(src: str, cases) -> bool:
 
 def run(seed: int, n: int) -> dict[str, dict[str, list[int]]]:
     rng = random.Random(seed)
-    out = {c: {"final_correct": [], "corrupted": [], "fixed": []} for c in ("no_review", "naive", "guarded")}
+    out: dict[str, dict[str, list[int]]] = {c: {"final_correct": [], "corrupted": [], "fixed": []}
+                                            for c in ("no_review", "naive", "guarded")}
     names = sorted(TASKS)
     for _ in range(n):
         name = rng.choice(names)
@@ -62,7 +63,7 @@ def run(seed: int, n: int) -> dict[str, dict[str, list[int]]]:
         style = lambda s: ("# reviewed" in s, "reviewer wants a '# reviewed' marker")  # noqa: E731
 
         def reviser_factory():
-            it = iter(proposals)
+            it = iter(proposals)  # noqa: B023 - closure runs before the loop advances
             return lambda cur, fb: "# reviewed\n" + next(it, cur)
 
         results = {

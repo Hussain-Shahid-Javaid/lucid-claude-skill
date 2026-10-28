@@ -364,7 +364,7 @@ def cmd_invent(args) -> int:
             warn = ("\n  warning: " + ", ".join(c["cosmetic_flags"])) if c["cosmetic_flags"] else ""
             _out(args, c, f"candidate {c['id']}: {c['title']}{warn}")
         elif a == "check":
-            provs = []
+            provs: list = []
             if not args.no_local:
                 provs.append(LocalCollectionProvider(args.collection) if args.collection else LocalCollectionProvider())
             for name in args.offline or []:
@@ -467,6 +467,182 @@ def cmd_plain(args) -> int:
     rep = plain.check(text, question=args.question)
     _out(args, rep.as_dict(), plain.render(rep))
     return 0 if rep.ok or not args.strict else 1
+
+
+
+# --------------------------------------------------------------------------- quality
+def cmd_quality(args) -> int:
+    from .quality import QualityError
+    L = _lucid(args)
+    Q = L.quality
+    a = args.action
+    try:
+        if a == "init":
+            p = Q.load_plan(args.config, artifact=args.artifact)
+            _out(args, p, f"plan {p['id']} ({p['profile']}): {len(p['checks'])} checks for {p['artifact']}")
+        elif a == "plans":
+            rows = [dict(r) for r in L.store.q("SELECT id, subject, profile, created_at FROM quality_plans"
+                                                 " ORDER BY created_at DESC")]
+            _out(args, rows, "\n".join(f"{r['id']}  {r['profile']:<10} {r['subject']}" for r in rows) or "(none)")
+        elif a == "show":
+            p = Q.plan(args.plan)
+            lines = [f"{p['subject']} ({p['profile']})"]
+            for c in p["checks"]:
+                st = Q.check_state(p["id"], c)["state"]
+                lines.append(f"  {st:<8} {c['key']:<18} {c['kind']:<12} {'required' if c['mandatory'] else 'optional'}")
+            _out(args, p, "\n".join(lines))
+        elif a == "run":
+            res = Q.run_all(args.plan, time_budget_s=args.time_budget, include_optional=not args.no_optional,
+                            only=args.only)
+            lines = [f"  {r['outcome']:<7} {r['key']}" + (" (already passed on these files)" if r["reused"] else "")
+                     for r in res["ran"]] + [f"  skipped {s['key']}: {s['reason']}" for s in res["skipped"]]
+            _out(args, res, "\n".join(lines) or "nothing to run")
+        elif a == "record":
+            if args.passed == args.failed:
+                print("lucid quality record: pass exactly one of --passed or --failed", file=sys.stderr)
+                return 2
+            r = Q.record_result(args.plan, args.key, args.passed, args.evidence)
+            _out(args, r, f"recorded {args.key}: {r['outcome']}")
+        elif a == "defect":
+            if args.op == "add":
+                d = Q.add_defect(args.target, args.severity, args.title, args.evidence or "", check_key=args.check)
+            elif args.op == "escaped":
+                d = Q.report_escaped(args.target, args.severity, args.title, args.evidence or "")
+            elif args.op == "resolve":
+                d = Q.resolve_defect(args.target, resolution=args.resolution or "", verified_by=args.verified_by)
+            else:
+                d = Q.accept_defect(args.target, reason=args.reason or "", actor="user")
+            _out(args, d, f"defect {d['id']} [{d['severity']}] {d['status']}: {d['title']}")
+        elif a == "review":
+            with open(args.file, encoding="utf-8") as fh:
+                rv = json.load(fh)
+            r = Q.add_review(args.plan, rv["reviewer"], independent=bool(rv.get("independent")),
+                             examined=rv.get("examined", []), findings=rv.get("findings", []),
+                             summary=rv.get("summary", ""))
+            _out(args, r, f"review {r['id']}: {len(r['findings'])} findings recorded as defects")
+        elif a == "compare":
+            with open(args.file, encoding="utf-8") as fh:
+                cfg = json.load(fh)
+            r = Q.compare(args.plan, cfg["options"], chosen=cfg["chosen"], rationale=cfg.get("rationale", ""),
+                          originality=L.originality)
+            _out(args, r, f"chose {r['chosen']}" + "".join(f"\n  warning: {w}" for w in r["warnings"]))
+        elif a == "gate":
+            rep = Q.gate(args.plan)
+            text = Q.render(rep)
+            if args.out:
+                with open(args.out, "w", encoding="utf-8") as fh:
+                    fh.write(text)
+            _out(args, rep, text if args.markdown else
+                 f"{rep['status'].replace('_', ' ')}" + "".join(f"\n  - {b}" for b in rep["blockers"]))
+            return {"verified": 0, "failed": 1}.get(rep["status"], 3)
+        elif a == "metrics":
+            m = Q.metrics()
+            _out(args, m, "\n".join(f"{k}: {v}" for k, v in m.items()))
+    except (QualityError, KeyError) as e:
+        print(f"lucid quality: {e}", file=sys.stderr)
+        return 2
+    return 0
+
+
+
+# --------------------------------------------------------------------------- comms
+def cmd_comms(args) -> int:
+    from .comms import CommsError
+    L = _lucid(args)
+    C = L.comms
+    a = args.action
+    try:
+        if a == "connect":
+            token = os.environ.get(args.token_env) if args.token_env else None
+            if args.token_env and not token:
+                print(f"lucid comms: environment variable {args.token_env} is empty", file=sys.stderr)
+                return 2
+            acct = C.connect(args.provider, args.identity, identity_kind=args.identity_kind,
+                             user=_scope(args).user, display=args.display or "", workspace=args.workspace or "",
+                             team_scope=args.team_scope or "", token=token)
+            _out(args, acct, f"connected {acct['id']} ({acct['provider']} as {acct['identity']}). "
+                             "It can only draft until you set a policy.")
+        elif a == "policy":
+            rules = json.loads(args.rules) if args.rules else {}
+            pol = C.set_policy(args.account, args.mode, **rules)
+            _out(args, pol, f"policy {pol['id']}: {pol['mode']}")
+        elif a == "compose":
+            m = C.compose(args.account, args.body, to=args.to or [], channel=args.channel, thread=args.thread,
+                          subject=args.subject, attachments=args.attach or [], topic=args.topic,
+                          evidence=args.evidence or [], op_id=args.op_id)
+            _out(args, m, C.preview(m["id"]))
+        elif a == "preview":
+            print(C.preview(args.id))
+        elif a == "approve":
+            m = C.approve(args.id, seen_hash=args.seen, confirm=args.confirm or [])
+            _out(args, m, f"{m['id']} queued")
+        elif a == "process":
+            res = C.process()
+            _out(args, res, "\n".join(f"{r['id']}  {r['status']}" + (f"  ({r['reason']})" if r.get("reason") else "")
+                                      for r in res) or "nothing due")
+        elif a == "outbox":
+            ms = C.outbox(args.account)
+            _out(args, ms, "\n".join(f"{m['id']}  {m['status']:<16} {(m['subject'] or m['body'])[:60]!r}"
+                                     for m in ms) or "(empty)")
+        elif a == "mark":
+            m = C.mark_outcome(args.id, sent=args.sent, note=args.note or "")
+            _out(args, m, f"{m['id']} {m['status']}")
+        elif a == "revoke":
+            _out(args, C.revoke_account(args.account))
+        elif a == "audit":
+            _out(args, C.audit(args.id))
+    except (CommsError, KeyError) as e:
+        print(f"lucid comms: {e}", file=sys.stderr)
+        return 2
+    return 0
+
+
+
+# --------------------------------------------------------------------------- avatar
+def cmd_avatar(args) -> int:
+    from .avatar import AvatarError, StillImageRenderer
+    L = _lucid(args)
+    A = L.avatars
+    a = args.action
+    user = _scope(args).user
+    try:
+        if a == "enroll":
+            e = A.enroll(user, args.name, provider=args.provider)
+            _out(args, e, f"enrollment {e['id']} ({e['provider']}). Next: consent likeness, then add photos.")
+        elif a == "consent":
+            r = A.consent(args.id, args.kind, args.statement, signed_by=user, method=args.method, evidence=args.evidence)
+            _out(args, r, f"{args.kind} consent recorded")
+        elif a == "add-media":
+            r = A.add_media(args.id, args.kind, args.path, subject="self" if args.mine else "other")
+            _out(args, r, f"stored {r['kind']} in the protected vault")
+        elif a == "preview":
+            e = A.build_preview(args.id, StillImageRenderer())
+            _out(args, e, f"preview: {e['preview']['path']}\nreview it, then: lucid avatar activate {args.id} "
+                          f"--reviewed {e['preview']['sha256']}")
+        elif a == "activate":
+            e = A.activate(args.id, actor="user", reviewed_preview_sha256=args.reviewed, uses=args.use or ["meetings"],
+                           voice=args.voice)
+            _out(args, e, f"active: appearance {'on' if e['appearance_enabled'] else 'off'}, voice "
+                          f"{'on' if e['voice_enabled'] else 'off'}")
+        elif a == "authorize":
+            rules = json.loads(args.rules)
+            r = A.authorize_meetings(args.id, actor="user", **rules)
+            _out(args, r, f"meeting authorization {r['id']}")
+        elif a == "revoke":
+            _out(args, A.revoke(args.id, args.kind, actor="user"))
+        elif a == "delete":
+            r = A.delete(args.id, actor="user")
+            _out(args, r, "\n".join(f"{x['item']}: {x['status']}" for x in r["report"]) + "\n" + r["retention_after"])
+        elif a == "status":
+            _out(args, A.overview(user))
+        elif a == "demo":
+            from importlib import resources
+            path = str(resources.files("lucid") / "avatar" / "web" / "demo.html")
+            print(f"Open in a browser: file://{path}?name=YourName\n(local loopback demonstration only)")
+    except (AvatarError, KeyError, ValueError) as e:
+        print(f"lucid avatar: {e}", file=sys.stderr)
+        return 2
+    return 0
 
 
 def cmd_capabilities(args) -> int:
@@ -836,6 +1012,121 @@ def build_parser() -> argparse.ArgumentParser:
     x.add_argument("--question", help="the question being answered, to judge length")
     x.add_argument("--fix", action="store_true", help="apply only the safe phrase swaps and print the result")
     x.add_argument("--strict", action="store_true", help="exit 1 if anything is flagged")
+    qa = sub.add_parser("quality", help="acceptance criteria, checks and release gates").add_subparsers(
+        dest="action", required=True)
+    x = common(qa.add_parser("init", help="create a plan from a JSON file"))
+    x.add_argument("config")
+    x.add_argument("--artifact", help="folder or file being checked (default: the config's folder)")
+    common(qa.add_parser("plans"))
+    x = common(qa.add_parser("show"))
+    x.add_argument("plan")
+    x = common(qa.add_parser("run", help="run checks: required first, optional only with time left"))
+    x.add_argument("plan")
+    x.add_argument("--only", action="append")
+    x.add_argument("--time-budget", type=float, help="seconds")
+    x.add_argument("--no-optional", action="store_true")
+    x = common(qa.add_parser("record", help="record a manual check with evidence"))
+    x.add_argument("plan")
+    x.add_argument("key")
+    x.add_argument("--passed", action="store_true")
+    x.add_argument("--failed", action="store_true")
+    x.add_argument("--evidence", required=True)
+    x = common(qa.add_parser("defect", help="add, resolve, accept or report an escaped defect"))
+    x.add_argument("op", choices=["add", "resolve", "accept", "escaped"])
+    x.add_argument("target", help="plan id (add, escaped) or defect id (resolve, accept)")
+    x.add_argument("--severity", choices=["blocker", "major", "minor", "trivial"])
+    x.add_argument("--title")
+    x.add_argument("--evidence")
+    x.add_argument("--check")
+    x.add_argument("--resolution")
+    x.add_argument("--verified-by")
+    x.add_argument("--reason")
+    x = common(qa.add_parser("review", help="record a review from a JSON file"))
+    x.add_argument("plan")
+    x.add_argument("--file", required=True)
+    x = common(qa.add_parser("compare", help="compare alternative approaches from a JSON file"))
+    x.add_argument("plan")
+    x.add_argument("--file", required=True)
+    x = common(qa.add_parser("gate", help="evaluate the release gate (exit 0 verified, 1 failed, 3 pending)"))
+    x.add_argument("plan")
+    x.add_argument("--markdown", action="store_true")
+    x.add_argument("--out")
+    common(qa.add_parser("metrics"))
+    cm = sub.add_parser("comms", help="email, Slack and Teams: drafts, reviewed sends, authorized sends").add_subparsers(
+        dest="action", required=True)
+    x = common(cm.add_parser("connect", help="connect an account (authorizes drafting only)"))
+    x.add_argument("provider", choices=["slack", "gmail", "outlook", "teams"])
+    x.add_argument("identity", help="address or user/bot id the provider sends as")
+    x.add_argument("--identity-kind", required=True, choices=["user_delegated", "bot", "app", "send_as_alias"])
+    x.add_argument("--token-env", help="name of an environment variable holding the token (never pass tokens as arguments)")
+    x.add_argument("--display")
+    x.add_argument("--workspace")
+    x.add_argument("--team-scope")
+    x = common(cm.add_parser("policy", help="set the standing authorization for an account"))
+    x.add_argument("account")
+    x.add_argument("mode", choices=["draft_only", "send_after_review", "auto"])
+    x.add_argument("--rules", help='JSON, e.g. {"channels": ["C123"], "rate": {"per_hour": 5}}')
+    x = common(cm.add_parser("compose"))
+    x.add_argument("account")
+    x.add_argument("body")
+    x.add_argument("--to", action="append")
+    x.add_argument("--channel")
+    x.add_argument("--thread")
+    x.add_argument("--subject")
+    x.add_argument("--attach", action="append")
+    x.add_argument("--topic")
+    x.add_argument("--evidence", action="append")
+    x.add_argument("--op-id")
+    for name in ("preview", "audit"):
+        x = common(cm.add_parser(name))
+        x.add_argument("id")
+    x = common(cm.add_parser("approve"))
+    x.add_argument("id")
+    x.add_argument("--seen", required=True, help="content hash shown by preview: approves exactly that text")
+    x.add_argument("--confirm", action="append", help="flag code you have checked, e.g. recipient_not_allowed")
+    common(cm.add_parser("process", help="send what is due and settle unknown outcomes"))
+    x = common(cm.add_parser("outbox"))
+    x.add_argument("--account")
+    x = common(cm.add_parser("mark", help="settle an ambiguous send you checked yourself"))
+    x.add_argument("id")
+    g = x.add_mutually_exclusive_group(required=True)
+    g.add_argument("--sent", action="store_true")
+    g.add_argument("--not-sent", action="store_true")
+    x.add_argument("--note")
+    x = common(cm.add_parser("revoke"))
+    x.add_argument("account")
+    av = sub.add_parser("avatar", help="optional AI-representative avatar (your own likeness only)").add_subparsers(
+        dest="action", required=True)
+    x = common(av.add_parser("enroll"))
+    x.add_argument("name", help="your name as shown in the disclosure")
+    x.add_argument("--provider", default="local-still", choices=["local-still", "heygen", "tavus"])
+    x = common(av.add_parser("consent"))
+    x.add_argument("id")
+    x.add_argument("kind", choices=["likeness", "voice"])
+    x.add_argument("statement")
+    x.add_argument("--method", default="typed_statement", choices=["typed_statement", "consent_video", "provider_terms"])
+    x.add_argument("--evidence", help="media id of a consent video")
+    x = common(av.add_parser("add-media"))
+    x.add_argument("id")
+    x.add_argument("kind", choices=["photo", "video", "voice_sample", "consent_video"])
+    x.add_argument("path")
+    x.add_argument("--mine", action="store_true", help="confirm this media shows you")
+    for name in ("preview", "delete"):
+        x = common(av.add_parser(name))
+        x.add_argument("id")
+    x = common(av.add_parser("activate"))
+    x.add_argument("id")
+    x.add_argument("--reviewed", required=True, help="sha256 of the preview you looked at")
+    x.add_argument("--use", action="append", choices=["meetings", "recorded_messages", "preview_only"])
+    x.add_argument("--voice", action="store_true")
+    x = common(av.add_parser("authorize", help="approve meetings or meeting categories"))
+    x.add_argument("id")
+    x.add_argument("--rules", required=True, help="JSON: categories/meetings, hosts, knowledge, max_duration_s, max_cost_usd, ...")
+    x = common(av.add_parser("revoke"))
+    x.add_argument("id")
+    x.add_argument("--kind", choices=["likeness", "voice"])
+    common(av.add_parser("status"))
+    common(av.add_parser("demo", help="path of the local WebRTC demonstration page"))
     x = common(sub.add_parser("capabilities", help="host capability matrix"))
     x.add_argument("--host")
     sy = sub.add_parser("sync").add_subparsers(dest="action", required=True)
@@ -853,7 +1144,7 @@ def build_parser() -> argparse.ArgumentParser:
 DISPATCH = {"memory": cmd_memory, "import": cmd_import, "conv": cmd_conv, "handoff": cmd_handoff,
             "share": cmd_share, "task": cmd_task, "budget": cmd_budget, "decide": cmd_decide,
             "monitor": cmd_monitor, "capabilities": cmd_capabilities, "sync": cmd_sync, "serve": cmd_serve,
-            "mcp": cmd_mcp, "eval": cmd_eval, "invent": cmd_invent, "plain": cmd_plain}
+            "mcp": cmd_mcp, "eval": cmd_eval, "invent": cmd_invent, "plain": cmd_plain, "quality": cmd_quality, "comms": cmd_comms, "avatar": cmd_avatar}
 
 
 def main(argv: list[str] | None = None) -> int:

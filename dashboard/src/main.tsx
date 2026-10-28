@@ -2,7 +2,7 @@ import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { initToken, setToken, useTokenValue } from "./api";
 import { useApi } from "./ui";
-import { Activity, Connectors, Conversations, Memory, Overview, Questions, Sharing, Sync, Verification, Work } from "./views";
+import { Activity, Connectors, Conversations, Memory, Overview, Questions, Representation, Sharing, Sync, Verification, Work } from "./views";
 import "./styles.css";
 
 const TABS = {
@@ -13,6 +13,7 @@ const TABS = {
   sharing: ["Sharing", Sharing],
   work: ["Tasks & budgets", Work],
   questions: ["Questions", Questions],
+  representation: ["Messaging & avatar", Representation],
   verification: ["Verification & research", Verification],
   connectors: ["Connectors & data", Connectors],
   activity: ["Activity", Activity],

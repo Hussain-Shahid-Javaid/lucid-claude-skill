@@ -33,7 +33,7 @@ try:
 except ImportError as e:  # pragma: no cover
     raise SystemExit("the service needs: pip install 'lucid-skill[service]'") from e
 
-TOKEN_FILE = "service_tokens.json"
+TOKEN_FILE = "service_tokens.json"  # noqa: S105 - a file name, not a secret
 
 
 def _hash(tok: str) -> str:
@@ -49,7 +49,7 @@ def ensure_token(home: str | None = None, user: str = "default") -> tuple[str, s
     if os.path.exists(path):
         with open(path) as fh:
             tokens = json.load(fh)
-    for h, u in tokens.items():
+    for _h, u in tokens.items():
         if u == user:
             return path, ""
     tok = secrets.token_urlsafe(32)
@@ -271,7 +271,7 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
         try:
             c = L.archive.get(cid)
         except KeyError:
-            raise HTTPException(404, "not found")
+            raise HTTPException(404, "not found") from None
         if c["user_scope"] != request.state.user:
             raise HTTPException(404, "not found")
         return ok(c)
@@ -357,6 +357,33 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
             err(e)
         raise HTTPException(404, "unknown action")
 
+    @app.get("/api/representation")
+    def representation(request: Request):
+        user = request.state.user
+        accts = [L.comms.account(r[0]) for r in L.store.q(
+            "SELECT id FROM comm_accounts WHERE user_scope=? ORDER BY created_at DESC", (user,))]
+        for a in accts:
+            pol = L.comms.policy(a["id"])
+            a["mode"] = pol["mode"] if pol else "draft_only (no policy)"
+            a["rules"] = pol["rules"] if pol else {}
+        outbox = [m for m in L.comms.outbox() if m["user_scope"] == user][:100]
+        return ok({"accounts": accts, "outbox": outbox, **L.avatars.overview(user)})
+
+    @app.post("/api/comms/{mid}/approve")
+    def comms_approve(request: Request, mid: str, body: dict = Body(default={})):
+        from ..comms import CommsError
+        try:
+            m = L.comms.message(mid)
+        except KeyError:
+            raise HTTPException(404, "not found") from None
+        if m["user_scope"] != request.state.user:
+            raise HTTPException(404, "not found")
+        try:
+            return ok(L.comms.approve(mid, actor="user", confirm=body.get("confirm") or [],
+                                      seen_hash=str(body.get("seen_hash") or "")))
+        except CommsError as e:
+            raise HTTPException(409, str(e)) from e
+
     @app.get("/api/verifications")
     def verifications(request: Request):
         admin(request)
@@ -404,7 +431,7 @@ def create_app(lucid: Lucid, *, token_map: dict[str, str], allowed_hosts: list[s
         try:
             return ok(ingest_capture(L, body, user=request.state.user))
         except CaptureRejected as e:
-            raise HTTPException(403, str(e))
+            raise HTTPException(403, str(e)) from e
 
     @app.get("/api/captures")
     def captures(request: Request):

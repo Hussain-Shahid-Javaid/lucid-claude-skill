@@ -46,21 +46,21 @@ def parse(data: bytes, account: str = "default") -> Iterator[NormalizedConversat
         raise ImportErrorBadInput(f"activity file is not valid JSON (choose JSON format in Takeout): {e}") from None
     if not isinstance(doc, list):
         raise ImportErrorBadInput("expected a JSON array of activity entries")
-    for i, e in enumerate(doc):
-        if not isinstance(e, dict) or "title" not in e:
+    for i, entry in enumerate(doc):
+        if not isinstance(entry, dict) or "title" not in entry:
             raise ImportErrorBadInput(f"activity entry #{i} has no 'title' — format not recognised")
-        title = str(e.get("title", ""))
+        title = str(entry.get("title", ""))
         prompt = re.sub(r"^(Prompted|Asked|Searched for)\s+", "", title)
         reply_html = ""
-        for item in e.get("safeHtmlItem") or []:
+        for item in entry.get("safeHtmlItem") or []:
             if isinstance(item, dict) and item.get("html"):
                 reply_html += item["html"]
-        eid = "gem-" + sha256(f"{e.get('time')}|{title}")[:20]
-        msgs = [NormalizedMessage(external_id=f"{eid}:p", role="user", content=prompt, created_at=e.get("time"))]
+        eid = "gem-" + sha256(f"{entry.get('time')}|{title}")[:20]
+        msgs = [NormalizedMessage(external_id=f"{eid}:p", role="user", content=prompt, created_at=entry.get("time"))]
         if reply_html:
             msgs.append(NormalizedMessage(external_id=f"{eid}:r", role="assistant", content=_strip_html(reply_html),
-                                          parent=f"{eid}:p", created_at=e.get("time")))
+                                          parent=f"{eid}:p", created_at=entry.get("time")))
         yield NormalizedConversation(provider="gemini", account=account, external_id=eid, title=prompt[:80],
-                                     created_at=e.get("time"), updated_at=e.get("time"), messages=msgs,
+                                     created_at=entry.get("time"), updated_at=entry.get("time"), messages=msgs,
                                      coverage="partial",
                                      warnings=["Takeout activity entry: single turn; grouping/branches unavailable"])

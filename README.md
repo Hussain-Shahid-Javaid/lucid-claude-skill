@@ -17,6 +17,9 @@ Lucid is a portable AI **skill** plus a small local toolkit that gives assistant
   - A bounded verify-and-correct cycle that keeps correct answers from being broken
 - **Observation, not replacement.** A local web dashboard, an optional MCP server, a browser capture extension and storage mirrors to S3 or Google Docs. You keep chatting in your existing AI tools.
 - **Originality checks.** Lucid checks a new idea against its own records and against existing work before anyone calls it new. Each check logs every search and gives the idea a status limited to what was searched: known, adaptation, potentially original within that scope, unresolved, or not assessed. It never says "nobody has thought of this". See [docs/originality.md](docs/originality.md).
+- **Quality gates.** Lucid checks work against acceptance criteria before calling it done. Each check result is tied to the exact files it ran on, so an edit makes it stale. Weakened tests are caught. The gate reports what was verified, what was not run, and the known defects. Lucid's own releases go through this gate. See [docs/quality-gates.md](docs/quality-gates.md).
+- **Email, Slack and Teams (optional).** Lucid can write drafts, send after your review, or send automatically, but only within limits you set. Messages are disclosed as written by Lucid. Sends are idempotent and checked again before any retry. This is tested against fakes, not live accounts. See [docs/team-integrations.md](docs/team-integrations.md).
+- **Avatar representative (optional).** Lucid can build an avatar from your own likeness, with consent, a preview step and deletion. In meetings it is always shown as "Lucid — AI representative for you", and only joins meetings you approved. So far this is tested in simulation and in a local WebRTC demo; no meeting platform is integrated. See [docs/avatar.md](docs/avatar.md).
 - **Plain-language replies.** The skill tells the assistant to answer first, in plain words, and to keep every fact and caveat. `lucid plain check` flags stiff or wordy text. See [docs/plain-language.md](docs/plain-language.md).
 - **Measurement.** It ships an evaluation runner, a discovery-experiment ledger, and an optional, clearly bounded consciousness-research module.
 
@@ -74,10 +77,10 @@ To use it on claude.ai, upload `dist/lucid-skill.zip` through claude.ai's Skills
 | path | what |
 |---|---|
 | `skill/lucid/` | Agent Skill: `SKILL.md`, `references/`, `scripts/lucid.py` (the library is copied into `scripts/lib` at build time) |
-| `src/lucid/` | Core library: `memory`, `conversations`, `importers/`, `handoff`, `sync`, `budget`, `tasks`, `decisions`, `orchestrator`, `verification`, `monitor`, `originality`, `plain`, `storage/` (S3, Google Docs), `connectors/`, `capture`, `mcp_server`, `server/` (FastAPI), `evals/`, `research_modules/` |
+| `src/lucid/` | Core library: `memory`, `conversations`, `importers/`, `handoff`, `sync`, `budget`, `tasks`, `decisions`, `orchestrator`, `verification`, `monitor`, `originality`, `plain`, `quality`, `comms`, `avatar/`, `storage/` (S3, Google Docs), `connectors/`, `capture`, `mcp_server`, `server/` (FastAPI), `evals/`, `research_modules/` |
 | `dashboard/` | React + TypeScript dashboard. `npm run build` writes to `src/lucid/web/` |
 | `extension/` | Manifest V3 browser capture extension, site adapters and versioned fixtures |
-| `tests/` | 124 tests: unit, contract (moto S3, fake Docs), MCP, CLI, service security, Playwright dashboard and extension |
+| `tests/` | 236 tests: unit, contract (moto S3, fake Docs, fake Slack/Gmail/Graph), MCP, CLI, service security, Playwright dashboard, extension and WebRTC demo |
 | `evals/`, `reports/` | Pre-registration and generated evaluation/research reports |
 | `docs/` | Architecture, storage, compatibility matrix, security, budgets, decisions, research protocols, status |
 | `tools/` | Skill build/validate, Claude Code installer |
@@ -86,7 +89,7 @@ To use it on claude.ai, upload `dist/lucid-skill.zip` through claude.ai's Skills
 
 ```bash
 pip install -e ".[dev]" && python -m playwright install chromium   # browser only if not already present
-pytest                                   # 124 tests; live-provider tests are marked `live` and skipped
+pytest                                   # 236 tests; live-provider tests are marked `live` and skipped
 (cd dashboard && npm ci && npm run build)
 python3 tools/build_skill.py             # validates SKILL.md and writes dist/lucid-skill.zip
 lucid eval run --split heldout           # regenerates reports/evaluation-heldout.{md,json}; 0 model calls
@@ -101,7 +104,8 @@ lucid eval run --split heldout           # regenerates reports/evaluation-heldou
 - [Conversation exchange format](docs/exchange-format.md)
 - [Budgets](docs/budgets.md) · [Decisions & autonomy](docs/decisions.md) · [Security & privacy](docs/security.md)
 - [Originality checks](docs/originality.md) · [Plain-language replies](docs/plain-language.md)
+- [Quality gates](docs/quality-gates.md) · [Email, Slack and Teams](docs/team-integrations.md) · [Avatar](docs/avatar.md)
 - [Browser extension](docs/extension.md) · [Evaluation methodology](docs/evaluation.md) · [Research protocols](docs/research-protocols.md)
-- [Implementation status & limitations](docs/status.md) · [Changelog](CHANGELOG.md) · [v0.2.0 release notes](docs/releases/v0.2.0.md)
+- [Implementation status & limitations](docs/status.md) · [Changelog](CHANGELOG.md) · [v0.3.0 release notes](docs/releases/v0.3.0.md)
 
 License: MIT.

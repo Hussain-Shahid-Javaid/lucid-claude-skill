@@ -6,7 +6,6 @@ import pytest
 from lucid.budget import InsufficientBudget, Usage
 from lucid.core import Lucid
 from lucid.decisions import DecisionError, DecisionScheduler
-from lucid.memory import Scope
 from lucid.util import Clock
 
 
@@ -124,8 +123,8 @@ def test_deadline_race_resolves_exactly_once(dbpath, clock):
         q = a.decisions.ask("Order?", ["x", "y"], category="ordering", default="x", timeout_s=1)
         clock.advance(1)
         results = {}
-        t1 = threading.Thread(target=lambda: results.setdefault("tick", a.decisions.tick()))
-        t2 = threading.Thread(target=lambda: results.setdefault("ans", b.decisions.answer(q["id"], "y")))
+        t1 = threading.Thread(target=lambda: results.setdefault("tick", a.decisions.tick()))  # noqa: B023 - closure runs before the loop advances
+        t2 = threading.Thread(target=lambda: results.setdefault("ans", b.decisions.answer(q["id"], "y")))  # noqa: B023 - closure runs before the loop advances
         t1.start(); t2.start(); t1.join(); t2.join()
         final = a.decisions.get(q["id"])
         assert final["status"] in ("answered", "defaulted")

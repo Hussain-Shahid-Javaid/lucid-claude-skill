@@ -211,7 +211,7 @@ class GoogleDocsBackend:
                     break
                 if sec and reconcile is not None:
                     reconcile(doc_id, parse_section(sec[2]))
-                requests = []
+                requests: list[dict] = []
                 new_text = render_section(part, op_id)
                 if sec:
                     start, end = sec[0], sec[1]
@@ -285,7 +285,7 @@ class FakeDocsClient:
     def get(self, did):
         d = self.docs[did]
         content, idx = [], 1
-        for n, line in enumerate(d["text"].splitlines(keepends=True)):
+        for line in d["text"].splitlines(keepends=True):
             ln = u16(line)
             content.append({"startIndex": idx, "endIndex": idx + ln, "paragraph": {"elements": [
                 {"startIndex": idx, "endIndex": idx + ln, "textRun": {"content": line}}]}})

@@ -11,6 +11,8 @@ Design rules enforced here (not just described in SKILL.md):
 """
 from __future__ import annotations
 
+import builtins
+
 import datetime as _dt
 import math
 import re
@@ -403,7 +405,7 @@ class MemoryStore:
         sets += ["revision=revision+1", "updated_at=?"]
         params += [self.s.clock.iso(), mid]
         with self.s.tx() as c:
-            c.execute(f"UPDATE memories SET {', '.join(sets)} WHERE id=?", params)
+            c.execute(f"UPDATE memories SET {', '.join(sets)} WHERE id=?", params)  # noqa: S608 - placeholders only; column names are internal
             if "tags" in fields:
                 c.execute("UPDATE memories_fts SET tags=? WHERE memory_id=?", (" ".join(fields["tags"]), mid))
         self.s.log(actor, "memory.edit", "memory", mid, {"fields": sorted(fields)})
@@ -464,9 +466,12 @@ class MemoryStore:
             c.execute("UPDATE memory_conflicts SET status='resolved', resolution=?, resolved_at=? WHERE id=?",
                       (resolution, self.s.clock.iso(), conflict_id))
         self.s.log(actor, "memory.conflict.resolve", "conflict", conflict_id, {"keep": keep})
-        return dict(self.s.one("SELECT * FROM memory_conflicts WHERE id=?", (conflict_id,)))
+        row = self.s.one("SELECT * FROM memory_conflicts WHERE id=?", (conflict_id,))
+        if row is None:
+            raise MemoryError("conflict not found")
+        return dict(row)
 
-    def conflicts(self, scope: Scope, status: str = "open") -> list[dict]:
+    def conflicts(self, scope: Scope, status: str = "open") -> builtins.list[dict]:
         return [dict(r) for r in self.s.q(
             "SELECT f.* FROM memory_conflicts f JOIN memories a ON a.id=f.memory_a WHERE f.status=? AND"
             " a.user_scope=? AND a.project_scope=?", (status, scope.user, scope.project))]
@@ -516,7 +521,7 @@ class MemoryStore:
         self.s.log(actor, "source.delete", "source", sid, {"invalidated": invalidated})
         return {"id": sid, "deleted": True, "invalidated_memories": invalidated}
 
-    def purge_expired(self) -> list[str]:
+    def purge_expired(self) -> builtins.list[str]:
         now = self.s.clock.iso()
         ids = [r[0] for r in self.s.q("SELECT id FROM memories WHERE status='active' AND expires_at IS NOT NULL"
                                       " AND expires_at<=?", (now,))]

@@ -13,6 +13,8 @@
 """
 from __future__ import annotations
 
+import builtins
+
 import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable
@@ -84,7 +86,7 @@ class Archive:
                scope_project: str = "", import_id: str | None = None, index: int | None = None,
                origin_lucid: bool = False) -> dict:
         """Upsert one conversation atomically. Checkpoint (if given) commits in the same transaction."""
-        stats = {"messages_new": 0, "messages_unchanged": 0, "messages_revised": 0, "messages_tombstoned": 0,
+        stats: dict[str, Any] = {"messages_new": 0, "messages_unchanged": 0, "messages_revised": 0, "messages_tombstoned": 0,
                  "echo_messages": 0, "skipped": None}
         if conv.provider == "" or conv.external_id == "":
             raise ImportErrorBadInput("conversation needs provider and external_id")
@@ -232,7 +234,7 @@ class Archive:
                    children={k or "": v for k, v in children.items()})
         return out
 
-    def thread(self, cid: str, leaf: str | None = None) -> list[dict]:
+    def thread(self, cid: str, leaf: str | None = None) -> builtins.list[dict]:
         """Linear path root→leaf for one branch (defaults to the provider's current leaf)."""
         conv = self.get(cid)
         by_ext = {m["external_id"]: m for m in conv["messages"] if m["status"] == "active"}
@@ -244,7 +246,7 @@ class Archive:
             leaf = by_ext[leaf]["parent_external_id"]
         return list(reversed(path))
 
-    def search_messages(self, text: str, user: str = "default", limit: int = 20) -> list[dict]:
+    def search_messages(self, text: str, user: str = "default", limit: int = 20) -> builtins.list[dict]:
         like = f"%{text}%"
         return [dict(r) for r in self.s.q(
             "SELECT m.id, m.conversation_id, m.role, substr(m.content,1,300) AS snippet, m.created_at FROM messages m"
@@ -267,11 +269,11 @@ class Archive:
             if msg_ids:
                 qs = ",".join("?" * len(msg_ids))
                 derived = {r[0] for r in c.execute(
-                    f"SELECT DISTINCT memory_id FROM memory_evidence WHERE message_id IN ({qs})", msg_ids)}
+                    f"SELECT DISTINCT memory_id FROM memory_evidence WHERE message_id IN ({qs})", msg_ids)}  # noqa: S608 - placeholders only; column names are internal
                 for mid in derived:
                     # Invalidate only memories with no remaining evidence outside this conversation.
                     others = c.execute(
-                        f"SELECT COUNT(*) FROM memory_evidence WHERE memory_id=? AND (message_id='' OR message_id"
+                        f"SELECT COUNT(*) FROM memory_evidence WHERE memory_id=? AND (message_id='' OR message_id"  # noqa: S608 - placeholders only; column names are internal
                         f" NOT IN ({qs}))", [mid, *msg_ids]).fetchone()[0]
                     if not others:
                         # Derived from deleted content: invalidate AND clear the text.
@@ -279,7 +281,7 @@ class Archive:
                                   " updated_at=? WHERE id=? AND status IN ('active','superseded')", (now, mid))
                         c.execute("DELETE FROM memories_fts WHERE memory_id=?", (mid,))
                         invalidated.append(mid)
-                    c.execute(f"DELETE FROM memory_evidence WHERE memory_id=? AND message_id IN ({qs})",
+                    c.execute(f"DELETE FROM memory_evidence WHERE memory_id=? AND message_id IN ({qs})",  # noqa: S608 - placeholders only; column names are internal
                               [mid, *msg_ids])
             # Queue deletes for destinations that previously received this conversation's content.
             sent = c.execute("SELECT DISTINCT destination FROM outbox WHERE status='done' AND payload LIKE ?",
